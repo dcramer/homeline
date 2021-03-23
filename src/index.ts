@@ -1,7 +1,7 @@
 import yargs from "yargs/yargs";
 
 import { Broker } from "./broker";
-import { webui } from "./webui";
+import { WebUI } from "./webui";
 
 import EchoIntegration from "./integrations/echo";
 
@@ -22,9 +22,8 @@ const main = ({
   const echo = new EchoIntegration(broker, { debug });
   echo.init();
 
-  webui.listen(webPort, () => {
-    return console.log(`[ui] listening on http://localhost:${webPort}`);
-  });
+  const webui = new WebUI(webPort, { debug });
+  webui.listen();
 };
 
 const argv = yargs(process.argv).options({
