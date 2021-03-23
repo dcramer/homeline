@@ -1,18 +1,26 @@
 import yargs from "yargs/yargs";
 
-import { initBroker } from "./broker";
+import { Broker } from "./broker";
 import { webui } from "./webui";
+
+import EchoIntegration from "./integrations/echo";
 
 type Options = {
   webPort: number;
   mqttHost: string;
 };
 
-const main = ({ webPort = 3000, mqttHost = "localhost:1883" }: Options) => {
-  initBroker({ host: mqttHost });
+const main = ({ webPort = 3000, mqttHost = "localhost" }: Options) => {
+  const broker = new Broker(mqttHost);
+  broker.init();
+
+  const echo = new EchoIntegration(broker);
+  echo.init();
+
+  // broker.registerIntegration(EchoIntegration());
 
   webui.listen(webPort, () => {
-    return console.log(`ui: listening on http://localhost:${webPort}`);
+    return console.log(`[ui] listening on http://localhost:${webPort}`);
   });
 };
 

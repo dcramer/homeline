@@ -5,71 +5,102 @@ type ShutdownOptions = {
   exit?: boolean;
 };
 
-type ClientOptions = {
-  host: string;
-  singleton?: boolean;
-};
+export type MessageCallback = (message: any, topic: string) => void;
 
-let client: mqtt.Client;
+export type Subscription = [string, MessageCallback];
 
 const log = (message: string) => {
   console.log(`[mqtt] ${message}`);
 };
 
-export const initBroker = ({
-  host,
-  singleton = true,
-}: ClientOptions): mqtt.Client => {
-  if (singleton && client) return client;
+export class Broker {
+  private host: string;
+  private client?: mqtt.Client;
+  private subscribers: Subscription[];
 
-  const localClient = mqtt.connect(`mqtt://${host}`);
-  log(`connecting to broker on mqtt://${host}`);
+  constructor(host: string = "localhost:1833") {
+    this.host = host;
+    this.subscribers = [];
+  }
 
-  localClient.on("error", (err: any) => {
-    log(`error: ${err}`);
-  });
+  public init() {
+    if (this.client) return;
 
-  localClient.on("connect", () => {
-    log("connected");
-    // localClient.subscribe("#");
-    // client.publish('garage/connected', 'true')
-  });
+    log(`connecting to broker on mqtt://${this.host}`);
 
-  localClient.on("message", (topic: string, message: any) => {
-    // switch (topic) {
-    //   case 'garage/connected':
-    //     return handleGarageConnected(message)
-    //   case 'garage/state':
-    //     return handleGarageState(message)
-    // }
-    log(`${topic} | ${message}`);
-  });
+    this.client = mqtt.connect(`mqtt://${this.host}`, {
+      clientId: "homeline-0.1.0",
+    });
 
-  const onShutdown = (
-    { cleanup, exit }: ShutdownOptions,
-    err: Error | undefined = undefined
-  ) => {
-    if (err && err.stack) {
-      log(err.stack?.toString());
-    }
+    this.client.on("error", (err: any) => {
+      console.error(`[mqtt] ${err}`);
+    });
 
-    if (cleanup) {
-      // client.publish("garage/connected", "false");
-    }
+    this.client.on("close", (err: any) => {
+      log(`disconnected: closed`);
+    });
 
-    if (exit) {
-      process.exit();
-    }
-  };
+    this.client.on("disconnect", (err: any) => {
+      log(`disconnected: packet`);
+    });
 
-  /**
-   * Handle the different ways an application can shutdown
-   */
-  process.on("exit", () => onShutdown({ cleanup: true }));
-  process.on("uncaughtException", () => onShutdown({ exit: true }));
-  process.on("SIGINT", () => onShutdown({ exit: true }));
+    this.client.on("reconnect", (err: any) => {
+      log(`reconnecting`);
+    });
 
-  client = localClient;
+    this.client.on("connect", () => {
+      log("connected");
+      const topics = new Set(this.subscribers.map(([t]) => t));
+      topics.forEach((t) => this.client!.subscribe(t));
+      this.client!.publish("homeline/connected", "true");
+    });
 
-  return localClient;
-};
+    this.client.on("message", (topic: string, message: any) => {
+      log(`< ${topic}`);
+      this.subscribers.forEach(([t, cb]) => {
+        if (topic === t) cb(message, topic);
+      });
+    });
+
+    const onShutdown = (
+      { cleanup, exit }: ShutdownOptions,
+      err: Error | undefined = undefined
+    ) => {
+      if (err && err.stack) {
+        log(err.stack?.toString());
+      }
+
+      if (cleanup) {
+        this.client?.publish("homeline/connected", "false");
+      }
+
+      if (exit) {
+        process.exit();
+      }
+    };
+
+    /**
+     * Handle the different ways an application can shutdown
+     */
+    process.on("exit", () => onShutdown({ cleanup: true }));
+    process.on("uncaughtException", () => onShutdown({ exit: true }));
+    process.on("SIGINT", () => onShutdown({ exit: true }));
+  }
+
+  public destroy() {}
+
+  public subscribe(topic: string, callback: MessageCallback) {
+    this.subscribers.push([topic, callback]);
+  }
+
+  public unsubscribe(topic: string, callback: MessageCallback) {
+    this.subscribers = this.subscribers.filter(([t, cb]) => {
+      return t !== topic || cb !== callback;
+    });
+  }
+
+  public publish(topic: string, message: string | Buffer) {
+    log(`> ${topic}`);
+    this.client!.publish(topic, message);
+  }
+}
