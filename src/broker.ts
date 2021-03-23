@@ -29,36 +29,47 @@ export class Broker {
     log(`connecting to broker on mqtt://${this.host}`);
 
     this.client = mqtt.connect(`mqtt://${this.host}`, {
-      clientId: "homeline-0.1.0",
+      clientId: `homeline-0.1.0_${Math.random().toString(16).substr(2, 8)}`,
+      protocolId: "MQIsdp",
+      protocolVersion: 3,
     });
 
     this.client.on("error", (err: any) => {
       console.error(`[mqtt] ${err}`);
     });
 
-    this.client.on("close", (err: any) => {
+    this.client.on("close", () => {
       log(`disconnected: closed`);
     });
 
-    this.client.on("disconnect", (err: any) => {
+    this.client.on("disconnect", () => {
       log(`disconnected: packet`);
     });
 
-    this.client.on("reconnect", (err: any) => {
+    this.client.on("reconnect", () => {
       log(`reconnecting`);
     });
 
-    this.client.on("connect", () => {
+    this.client.on("connect", (packet: any) => {
       log("connected");
       const topics = new Set(this.subscribers.map(([t]) => t));
-      topics.forEach((t) => this.client!.subscribe(t));
+      topics.forEach((t) => {
+        log(`subscribe to ${t}`);
+        this.client!.subscribe(t);
+      });
       this.client!.publish("homeline/connected", "true");
     });
 
     this.client.on("message", (topic: string, message: any) => {
       log(`< ${topic}`);
       this.subscribers.forEach(([t, cb]) => {
-        if (topic === t) cb(message, topic);
+        if (topic === t) {
+          try {
+            cb(message, topic);
+          } catch (err) {
+            console.error(`[mqtt] error with message callback: ${err}`);
+          }
+        }
       });
     });
 

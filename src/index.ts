@@ -17,8 +17,6 @@ const main = ({ webPort = 3000, mqttHost = "localhost" }: Options) => {
   const echo = new EchoIntegration(broker);
   echo.init();
 
-  // broker.registerIntegration(EchoIntegration());
-
   webui.listen(webPort, () => {
     return console.log(`[ui] listening on http://localhost:${webPort}`);
   });
