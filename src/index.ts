@@ -2,6 +2,7 @@ import yargs from "yargs/yargs";
 import machineUuid from "machine-uuid";
 import YAML from "yaml";
 import fs from "fs";
+import pino from "pino";
 
 import { Broker } from "./broker";
 import { WebUI } from "./webui";
@@ -40,6 +41,11 @@ const getIntegration = (name: string): typeof Integration => {
 };
 
 const main = ({ webPort, mqttHost, debug, configFile }: Options) => {
+  const logger = pino({
+    name: "homeline",
+    prettyPrint: debug ? { colorize: true } : undefined,
+  });
+
   const file = fs.readFileSync(configFile, "utf8");
   const globalConfig: Config = YAML.parse(file);
 
@@ -49,14 +55,18 @@ const main = ({ webPort, mqttHost, debug, configFile }: Options) => {
   const webui = new WebUI(webPort, { debug });
   webui.listen();
 
-  machineUuid((deviceUUID: string) => {
-    const options = { debug, deviceUUID };
+  machineUuid((deviceUuid: string) => {
+    const options = { debug, deviceUuid };
 
-    globalConfig.integrations.forEach(({ type, config }) => {
+    globalConfig.integrations.forEach(async ({ type, config }) => {
+      logger.info(`Registering integration ${type}`);
       const cls = getIntegration(type);
       const integration = new cls(broker, options, config);
-      integration.logger.info("Registered integration");
-      integration.init();
+      try {
+        await integration.init();
+      } catch (err) {
+        logger.error(err);
+      }
     });
   });
 };

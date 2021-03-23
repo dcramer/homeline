@@ -1,8 +1,8 @@
 import { Integration } from "../";
 
 export default class EchoIntegration extends Integration {
-  init() {
-    this.subscribe("test/echo", this.onEcho);
+  async init() {
+    await this.subscribe("test/echo", this.onEcho);
     setInterval(() => {
       this.publish("test/echo", `Echo - ${new Date().getTime()}`);
     }, 1000);

@@ -1,38 +1,102 @@
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 
 import { Integration } from "../";
 import { AGENT } from "../../version";
 
 type SimpliSafeConfig = {
-  email?: string;
+  username?: string;
   password?: string;
 };
 
-export default class SimpliSafeIntegration extends Integration {
-  public readonly config: SimpliSafeConfig = {};
+enum State {
+  authenticating,
+  pending_mfa,
+  ready,
+}
 
-  init() {
+export default class SimpliSafeIntegration extends Integration {
+  // public readonly config: SimpliSafeConfig = {};
+
+  private state?: State;
+  private apiUrl: string = "https://api.simplisafe.com/v1/api";
+
+  private ssClientId?: string;
+  private ssDeviceId?: string;
+
+  async init() {
     // this.subscribe("simplisafe/", this.onEcho);
     // setInterval(() => {
     //   this.publish("test/echo", `Echo - ${new Date().getTime()}`);
     // }, 1000);
-    this.authenticate();
+    this.ssClientId = `${AGENT}.WebApp.simplisafe.com`;
+    this.ssDeviceId = `WebApp; useragent="Safari 13.1 (SS-ID: {0}) / macOS 10.15.6"; uuid="${this.deviceUuid}"; id="${AGENT}"`;
+
+    await this.authenticate();
   }
 
-  authenticate() {
-    axios
-      .post(`https://api.simplisafe.com/v1/api/token`, {
-        email: this.config.email,
+  async authenticate() {
+    if (!this.config.username) {
+      throw new Error("Missing username configuration");
+    }
+    if (!this.config.password) {
+      throw new Error("Missing password configuration");
+    }
+    this.state = State.authenticating;
+
+    let response: AxiosResponse;
+
+    try {
+      response = await axios.post(`${this.apiUrl}/token`, {
+        grant_type: "password",
+        username: this.config.username,
         password: this.config.password,
-        version: 1200,
-        client_id: `${this.deviceUUID}/${AGENT}`,
-        device_id: this.deviceUUID,
-      })
-      .then((response) => {
-        this.logger.info("Successfully authenticated");
-      })
-      .catch((error) => {
-        this.logger.error(`Authentication failed: ${error.toString()}`);
+        app_version: "1.62.0",
+        client_id: this.ssClientId,
+        device_id: this.ssDeviceId,
+        scope: "offline_access",
       });
+    } catch (err) {
+      if (!err.response) {
+        return this.logger.error(err);
+      }
+      const data = err.response.data;
+      if (data.mfa_token) {
+        this.logger.info("Received MFA challenge");
+        return await this.handleMFAChallenge(err.response);
+      }
+      this.logger.error(`Authentication failed: ${data.error_description}`);
+    }
+
+    this.setState({
+      access_token: response!.data.access_token,
+      refresh_token: response!.data.refresh_token,
+    });
+  }
+
+  async handleMFAChallenge(tokenResponse: AxiosResponse) {
+    this.state = State.pending_mfa;
+
+    const response = await axios.post(`${this.apiUrl}/mfa/challenge`, {
+      challenge_type: "oob",
+      client_id: this.ssClientId,
+      mfa_token: tokenResponse.data.mfa_token,
+    });
+
+    try {
+      await axios.post(`${this.apiUrl}/token`, {
+        client_id: this.ssClientId,
+        grant_type: "http://simplisafe.com/oauth/grant-type/mfa-oob",
+        mfa_token: tokenResponse.data.mfa_token,
+        oob_code: response.data.oob_code,
+        scope: "offline_access",
+      });
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+
+    this.logger.info(
+      "Check your email for an MFA link to complete authentication with SimpliSafe."
+    );
   }
 }
