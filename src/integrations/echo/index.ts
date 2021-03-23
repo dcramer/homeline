@@ -8,8 +8,8 @@ export default class EchoIntegration extends Integration {
     }, 1000);
   }
 
-  onEcho = (message: string) => {
-    this.log(message);
+  onEcho = (message: string | Buffer) => {
+    this.log(message.toString());
   };
 
   destroy() {}

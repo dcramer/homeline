@@ -1,32 +1,44 @@
 import mqtt from "mqtt";
+import pino from "pino";
 
 type ShutdownOptions = {
   cleanup?: boolean;
   exit?: boolean;
 };
 
+type BrokerOptions = {
+  debug?: boolean;
+};
+
 export type MessageCallback = (message: any, topic: string) => void;
 
 export type Subscription = [string, MessageCallback];
-
-const log = (message: string) => {
-  console.log(`[mqtt] ${message}`);
-};
 
 export class Broker {
   private host: string;
   private client?: mqtt.Client;
   private subscribers: Subscription[];
+  private debug: boolean;
+  private logger: pino.Logger;
 
-  constructor(host: string = "localhost:1833") {
+  constructor(
+    host: string = "localhost:1833",
+    { debug = false }: BrokerOptions = {}
+  ) {
     this.host = host;
     this.subscribers = [];
+    this.debug = debug;
+
+    this.logger = pino({
+      name: "broker",
+      prettyPrint: this.debug ? { colorize: true } : undefined,
+    });
   }
 
   public init() {
     if (this.client) return;
 
-    log(`connecting to broker on mqtt://${this.host}`);
+    this.logger.info(`connecting to broker on mqtt://${this.host}`);
 
     this.client = mqtt.connect(`mqtt://${this.host}`, {
       clientId: `homeline-0.1.0_${Math.random().toString(16).substr(2, 8)}`,
@@ -35,33 +47,33 @@ export class Broker {
     });
 
     this.client.on("error", (err: any) => {
-      console.error(`[mqtt] ${err}`);
+      this.logger.error(err);
     });
 
     this.client.on("close", () => {
-      log(`disconnected: closed`);
+      this.logger.info(`disconnected: closed`);
     });
 
     this.client.on("disconnect", () => {
-      log(`disconnected: packet`);
+      this.logger.info(`disconnected: packet`);
     });
 
     this.client.on("reconnect", () => {
-      log(`reconnecting`);
+      this.logger.info(`reconnecting`);
     });
 
     this.client.on("connect", (packet: any) => {
-      log("connected");
+      this.logger.info("connected");
       const topics = new Set(this.subscribers.map(([t]) => t));
       topics.forEach((t) => {
-        log(`subscribe to ${t}`);
+        this.logger.info(`subscribe to ${t}`);
         this.client!.subscribe(t);
       });
       this.client!.publish("homeline/connected", "true");
     });
 
     this.client.on("message", (topic: string, message: any) => {
-      log(`< ${topic}`);
+      this.logger.debug(`< ${topic}`);
       this.subscribers.forEach(([t, cb]) => {
         if (topic === t) {
           try {
@@ -77,8 +89,8 @@ export class Broker {
       { cleanup, exit }: ShutdownOptions,
       err: Error | undefined = undefined
     ) => {
-      if (err && err.stack) {
-        log(err.stack?.toString());
+      if (err) {
+        this.logger.error(err);
       }
 
       if (cleanup) {
@@ -111,7 +123,7 @@ export class Broker {
   }
 
   public publish(topic: string, message: string | Buffer) {
-    log(`> ${topic}`);
+    this.logger.debug(`> ${topic}`);
     this.client!.publish(topic, message);
   }
 }

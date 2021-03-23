@@ -1,13 +1,22 @@
-import { Broker, Subscription, MessageCallback } from "../broker";
+import pino from "pino";
+
+import { Broker, MessageCallback } from "../broker";
+
+type IntegrationOptions = {
+  debug?: boolean;
+};
 
 export class Integration {
   private broker: Broker;
-  private subscriptions: Subscription[];
+  private logger: pino.Logger;
 
-  constructor(broker: Broker) {
+  constructor(broker: Broker, { debug = false }: IntegrationOptions = {}) {
     this.broker = broker;
 
-    this.subscriptions = [];
+    this.logger = pino({
+      name: this.constructor.name,
+      prettyPrint: debug ? { colorize: true } : undefined,
+    });
   }
 
   init() {}
@@ -23,10 +32,10 @@ export class Integration {
   }
 
   log(message: any) {
-    console.log(message);
+    this.logger.info(message);
   }
 
   error(message: any) {
-    console.error(message);
+    this.logger.error(message);
   }
 }
