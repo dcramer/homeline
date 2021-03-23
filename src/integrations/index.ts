@@ -4,14 +4,28 @@ import { Broker, MessageCallback } from "../broker";
 
 type IntegrationOptions = {
   debug?: boolean;
+  deviceUUID: string;
+};
+
+type IntegrationConfig = {
+  [name: string]: any;
 };
 
 export class Integration {
   private broker: Broker;
-  private logger: pino.Logger;
 
-  constructor(broker: Broker, { debug = false }: IntegrationOptions = {}) {
+  public readonly logger: pino.Logger;
+  public readonly deviceUUID: string;
+  public readonly config: IntegrationConfig = {};
+
+  constructor(
+    broker: Broker,
+    { deviceUUID, debug = false }: IntegrationOptions,
+    config: IntegrationConfig = {}
+  ) {
     this.broker = broker;
+    this.config = config;
+    this.deviceUUID = deviceUUID;
 
     this.logger = pino({
       name: this.constructor.name,
@@ -19,23 +33,23 @@ export class Integration {
     });
   }
 
-  init() {}
+  init(): void {}
 
-  destroy() {}
+  destroy(): void {}
 
-  subscribe(topic: string, callback: MessageCallback) {
+  subscribe(topic: string, callback: MessageCallback): void {
     this.broker.subscribe(topic, callback);
   }
 
-  publish(topic: string, message: any) {
+  publish(topic: string, message: any): void {
     this.broker.publish(topic, message);
   }
 
-  log(message: any) {
+  log(message: any): void {
     this.logger.info(message);
   }
 
-  error(message: any) {
+  error(message: any): void {
     this.logger.error(message);
   }
 }

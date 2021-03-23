@@ -11,6 +11,4 @@ export default class EchoIntegration extends Integration {
   onEcho = (message: string | Buffer) => {
     this.log(message.toString());
   };
-
-  destroy() {}
 }

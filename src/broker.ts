@@ -1,6 +1,8 @@
 import mqtt from "mqtt";
 import pino from "pino";
 
+import { AGENT } from "./version";
+
 type ShutdownOptions = {
   cleanup?: boolean;
   exit?: boolean;
@@ -41,7 +43,7 @@ export class Broker {
     this.logger.info(`connecting to broker on mqtt://${this.host}`);
 
     this.client = mqtt.connect(`mqtt://${this.host}`, {
-      clientId: `homeline-0.1.0_${Math.random().toString(16).substr(2, 8)}`,
+      clientId: `${AGENT}_${Math.random().toString(16).substr(2, 8)}`,
       protocolId: "MQIsdp",
       protocolVersion: 3,
     });
