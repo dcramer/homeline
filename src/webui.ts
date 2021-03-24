@@ -7,32 +7,32 @@ type WebUIOptions = {
 };
 
 export class WebUI {
-  private app: express.Express;
-  private port: number;
-  private debug: boolean;
-  private logger: pino.Logger;
+  #app: express.Express;
+  #port: number;
+  #debug: boolean;
+  #logger: pino.Logger;
 
   constructor(port: number, { debug = false }: WebUIOptions = {}) {
-    this.port = port;
-    this.debug = debug;
+    this.#port = port;
+    this.#debug = debug;
 
-    this.logger = pino({
+    this.#logger = pino({
       name: "webui",
-      prettyPrint: this.debug ? { colorize: true } : undefined,
+      prettyPrint: debug ? { colorize: true } : undefined,
     });
 
-    this.app = express();
+    this.#app = express();
 
-    this.app.use(expressPinoMiddleware({ logger: this.logger }));
+    this.#app.use(expressPinoMiddleware({ logger: this.#logger }));
 
-    this.app.get("/", (req, res) => {
+    this.#app.get("/", (req, res) => {
       res.send("The sedulous hyena ate the antelope!");
     });
   }
 
   listen() {
-    this.app.listen(this.port, () => {
-      this.logger.info(`listening on http://localhost:${this.port}`);
+    this.#app.listen(this.#port, () => {
+      this.#logger.info(`listening on http://localhost:${this.#port}`);
     });
   }
 }

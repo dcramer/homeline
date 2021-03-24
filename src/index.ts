@@ -5,6 +5,7 @@ import fs from "fs";
 import pino from "pino";
 
 import { Broker } from "./broker";
+import { Store } from "./store";
 import { WebUI } from "./webui";
 
 import { Integration } from "./integrations";
@@ -15,7 +16,8 @@ type Options = {
   webPort: number;
   mqttHost: string;
   debug: boolean;
-  configFile: string;
+  configPath: string;
+  cachePath: string;
 };
 
 type ConfigIntegrationEntry = {
@@ -40,14 +42,17 @@ const getIntegration = (name: string): typeof Integration => {
   }
 };
 
-const main = ({ webPort, mqttHost, debug, configFile }: Options) => {
+const main = ({ webPort, mqttHost, debug, configPath, cachePath }: Options) => {
   const logger = pino({
     name: "homeline",
     prettyPrint: debug ? { colorize: true } : undefined,
   });
 
-  const file = fs.readFileSync(configFile, "utf8");
+  const file = fs.readFileSync(configPath, "utf8");
   const globalConfig: Config = YAML.parse(file);
+
+  const store = new Store(cachePath, { debug });
+  store.init();
 
   const broker = new Broker(mqttHost, { debug });
   broker.init();
@@ -61,7 +66,7 @@ const main = ({ webPort, mqttHost, debug, configFile }: Options) => {
     globalConfig.integrations.forEach(async ({ type, config }) => {
       logger.info(`Registering integration ${type}`);
       const cls = getIntegration(type);
-      const integration = new cls(broker, options, config);
+      const integration = new cls(broker, store, options, config);
       try {
         await integration.init();
       } catch (err) {
@@ -75,7 +80,8 @@ const argv = yargs(process.argv).options({
   webPort: { type: "number", default: 3000 },
   mqttHost: { type: "string", default: "localhost:1883" },
   debug: { type: "boolean", default: false },
-  configFile: { type: "string", default: "./config.yml" },
+  configPath: { type: "string", default: "./config.yml" },
+  cachePath: { type: "string", default: "~/.cache/homeline.json" },
 }).argv;
 
 main(argv);

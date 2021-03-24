@@ -17,19 +17,19 @@ enum State {
 export default class SimpliSafeIntegration extends Integration {
   // public readonly config: SimpliSafeConfig = {};
 
-  private state?: State;
-  private apiUrl: string = "https://api.simplisafe.com/v1/api";
+  #state?: State;
+  #apiUrl: string = "https://api.simplisafe.com/v1/api";
 
-  private ssClientId?: string;
-  private ssDeviceId?: string;
+  #ssClientId?: string;
+  #ssDeviceId?: string;
 
   async init() {
     // this.subscribe("simplisafe/", this.onEcho);
     // setInterval(() => {
     //   this.publish("test/echo", `Echo - ${new Date().getTime()}`);
     // }, 1000);
-    this.ssClientId = `${AGENT}.WebApp.simplisafe.com`;
-    this.ssDeviceId = `WebApp; useragent="Safari 13.1 (SS-ID: {0}) / macOS 10.15.6"; uuid="${this.deviceUuid}"; id="${AGENT}"`;
+    this.#ssClientId = `${AGENT}.WebApp.simplisafe.com`;
+    this.#ssDeviceId = `WebApp; useragent="Safari 13.1 (SS-ID: {0}) / macOS 10.15.6"; uuid="${this.deviceUuid}"; id="${AGENT}"`;
 
     await this.authenticate();
   }
@@ -41,18 +41,18 @@ export default class SimpliSafeIntegration extends Integration {
     if (!this.config.password) {
       throw new Error("Missing password configuration");
     }
-    this.state = State.authenticating;
+    this.#state = State.authenticating;
 
     let response: AxiosResponse;
 
     try {
-      response = await axios.post(`${this.apiUrl}/token`, {
+      response = await axios.post(`${this.#apiUrl}/token`, {
         grant_type: "password",
         username: this.config.username,
         password: this.config.password,
         app_version: "1.62.0",
-        client_id: this.ssClientId,
-        device_id: this.ssDeviceId,
+        client_id: this.#ssClientId,
+        device_id: this.#ssDeviceId,
         scope: "offline_access",
       });
     } catch (err) {
@@ -74,17 +74,17 @@ export default class SimpliSafeIntegration extends Integration {
   }
 
   async handleMFAChallenge(tokenResponse: AxiosResponse) {
-    this.state = State.pending_mfa;
+    this.#state = State.pending_mfa;
 
-    const response = await axios.post(`${this.apiUrl}/mfa/challenge`, {
+    const response = await axios.post(`${this.#apiUrl}/mfa/challenge`, {
       challenge_type: "oob",
-      client_id: this.ssClientId,
+      client_id: this.#ssClientId,
       mfa_token: tokenResponse.data.mfa_token,
     });
 
     try {
-      await axios.post(`${this.apiUrl}/token`, {
-        client_id: this.ssClientId,
+      await axios.post(`${this.#apiUrl}/token`, {
+        client_id: this.#ssClientId,
         grant_type: "http://simplisafe.com/oauth/grant-type/mfa-oob",
         mfa_token: tokenResponse.data.mfa_token,
         oob_code: response.data.oob_code,

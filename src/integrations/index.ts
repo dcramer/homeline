@@ -1,6 +1,7 @@
 import pino from "pino";
 
 import { Broker, MessageCallback } from "../broker";
+import { State, Store } from "../store";
 
 type IntegrationOptions = {
   debug?: boolean;
@@ -11,13 +12,10 @@ type IntegrationConfig = {
   [name: string]: any;
 };
 
-type State = {
-  [name: string]: any;
-};
-
 export class Integration {
-  private _broker: Broker;
-  private _state: State = {};
+  #broker: Broker;
+  #state: State = {};
+  #store: Store;
 
   public readonly logger: pino.Logger;
   public readonly deviceUuid: string;
@@ -25,11 +23,12 @@ export class Integration {
 
   constructor(
     broker: Broker,
+    store: Store,
     { deviceUuid, debug = false }: IntegrationOptions,
     config: IntegrationConfig = {}
   ) {
-    this._broker = broker;
-    this._state = {};
+    this.#broker = broker;
+    this.#store = store;
 
     this.config = config;
     this.deviceUuid = deviceUuid;
@@ -45,11 +44,11 @@ export class Integration {
   async destroy() {}
 
   async subscribe(topic: string, callback: MessageCallback) {
-    this._broker.subscribe(topic, callback);
+    this.#broker.subscribe(topic, callback);
   }
 
   async publish(topic: string, message: any) {
-    this._broker.publish(topic, message);
+    this.#broker.publish(topic, message);
   }
 
   log(message: any): void {
@@ -61,12 +60,10 @@ export class Integration {
   }
 
   async setState(state: State) {
-    Object.keys(state).forEach((key) => {
-      this._state[key] = state[key];
-    });
+    await this.#store.setState(this.constructor.name, state);
   }
 
   async getState(callback: (state: State) => void) {
-    callback(this._state);
+    await this.#store.getState(this.constructor.name, callback);
   }
 }
