@@ -1,17 +1,11 @@
-import axios, { AxiosResponse } from "axios";
-
 import { Integration } from "../";
 import { AGENT } from "../../version";
 
+import SimpliSafeApi from "./api";
 import SimpliSafeStream from "./stream";
+import { SimpliSafeEvent, EventType } from "./event";
 
 const APP_VERSION = "1.62.0";
-const API_URL_BASE = "https://api.simplisafe.com/v1/api";
-
-type SimpliSafeConfig = {
-  username?: string;
-  password?: string;
-};
 
 enum State {
   authenticating,
@@ -23,128 +17,79 @@ export default class SimpliSafeIntegration extends Integration {
   // public readonly config: SimpliSafeConfig = {};
 
   #state?: State;
-  #apiUrl: string = API_URL_BASE;
+  #api?: SimpliSafeApi;
   #stream: SimpliSafeStream = new SimpliSafeStream();
 
-  #ssClientId?: string;
   #ssDeviceId?: string;
 
   async init() {
-    // this.subscribe("simplisafe/", this.onEcho);
-    // setInterval(() => {
-    //   this.publish("test/echo", `Echo - ${new Date().getTime()}`);
-    // }, 1000);
-    this.#ssClientId = `${AGENT}.WebApp.simplisafe.com`;
     this.#ssDeviceId = `WebApp; useragent="Safari 13.1 (SS-ID: {0}) / macOS 10.15.6"; uuid="${this.deviceUuid}"; id="${AGENT}"`;
 
-    try {
-      await this.verifyAuth();
-    } catch (err) {
-      try {
-        await this.authenticate({
-          grant_type: "password",
-          username: this.config.username,
-          password: this.config.password,
-          app_version: APP_VERSION,
-          device_id: this.#ssDeviceId,
-        });
-      } catch (err) {
-        this.logger.error(`Authentication failed: ${err}`);
-      }
-    }
-  }
+    this.#api = new SimpliSafeApi({
+      clientId: `${AGENT}.WebApp.simplisafe.com`,
+    });
 
-  async authenticate(payload = {}) {
-    if (!this.config.username) {
-      throw new Error("Missing username configuration");
-    }
-    if (!this.config.password) {
-      throw new Error("Missing password configuration");
-    }
+    this.#stream.on("event", this.onEvent);
+
     this.#state = State.authenticating;
-
-    let response: AxiosResponse;
-
-    try {
-      response = await axios.post(`${this.#apiUrl}/token`, {
-        client_id: this.#ssClientId,
-        scope: "offline_access",
-        ...payload,
-      });
-    } catch (err) {
-      if (!err.response) {
-        return this.logger.error(err);
-      }
-      const data = err.response.data;
-      if (data.mfa_token) {
-        this.logger.info("Received MFA challenge");
-        return await this.handleMFAChallenge(err.response);
-      }
-      this.logger.error(`Authentication failed: ${data.error_description}`);
-      return;
-    }
-
-    await this.setState({
-      accessToken: response!.data.access_token,
-      refreshToken: response!.data.refresh_token,
-    });
-  }
-
-  async verifyAuth() {
     const { accessToken } = await this.getState();
-    if (!accessToken) {
-      throw new Error("No access token");
+    if (accessToken) {
+      try {
+        const { userId } = await this.#api.verifyAuth(accessToken);
+        await this.setState({ userId });
+        this.#state = State.ready;
+        this.#stream.init(accessToken, userId, this.logger);
+      } catch (err) {
+        this.authenticate();
+      }
+    } else {
+      this.authenticate();
     }
-
-    const authResponse = await axios.get(`${this.#apiUrl}/authCheck`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    const userId = authResponse!.data.userId;
-
-    await this.setState({
-      userId,
-    });
-
-    this.logger.info(`Authenticated with SimpliSafe`);
-
-    this.#stream.init(accessToken, userId, this.logger);
   }
 
-  async handleMFAChallenge(tokenResponse: AxiosResponse) {
-    this.#state = State.pending_mfa;
+  formatTopicName = (name: string) =>
+    name.toString().replace(/[_\s]/g, "-").toLowerCase();
 
-    const response = await axios.post(`${this.#apiUrl}/mfa/challenge`, {
-      challenge_type: "oob",
-      client_id: this.#ssClientId,
-      mfa_token: tokenResponse.data.mfa_token,
-    });
+  onEvent = async (event: SimpliSafeEvent) => {
+    let topic = `simplisafe/sid/${event.sid}`;
+    if (event.sensorName) {
+      topic += `/sensor/${event.sensorName}`;
+    }
+    topic += `/event/${EventType[event.type]}`;
 
+    await this.publish(this.formatTopicName(topic), event);
+  };
+
+  async authenticate() {
     try {
-      await axios.post(`${this.#apiUrl}/token`, {
-        client_id: this.#ssClientId,
-        grant_type: "http://simplisafe.com/oauth/grant-type/mfa-oob",
-        mfa_token: tokenResponse.data.mfa_token,
-        oob_code: response.data.oob_code,
-        scope: "offline_access",
+      const result = await this.#api!.authenticate({
+        grant_type: "password",
+        username: this.config.username,
+        password: this.config.password,
+        app_version: APP_VERSION,
+        device_id: this.#ssDeviceId,
       });
+
+      if (result.status === "authenticated") {
+        const { userId } = await this.#api!.verifyAuth(
+          result.accessToken as string
+        );
+        await this.setState({
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          userId,
+        });
+        this.#state = State.ready;
+        this.#stream.init(result.accessToken as string, userId, this.logger);
+      } else if (result.status === "pending_mfa") {
+        this.#state = State.pending_mfa;
+
+        this.logger.info(
+          "Check your email for an MFA link to complete authentication with SimpliSafe."
+        );
+      }
     } catch (err) {
-      this.logger.error(`Error fetching token post-MFA: ${err}`);
-      throw err;
+      this.logger.error(`Authentication failed: ${err}`);
     }
-
-    this.logger.info(
-      "Check your email for an MFA link to complete authentication with SimpliSafe."
-    );
-  }
-
-  async refreshToken() {
-    const { refreshToken } = await this.getState();
-    await this.authenticate({
-      grant_type: "refresh_token",
-      refresh_token: refreshToken,
-    });
   }
 }

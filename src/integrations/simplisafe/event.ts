@@ -92,11 +92,11 @@ type RawEvent = {
   eventId: number;
 };
 
-type TypedEvent = RawEvent & {
+export type SimpliSafeEvent = RawEvent & {
   type: EventType;
 };
 
-export default (eventData: RawEvent): TypedEvent => {
+export default (eventData: RawEvent): SimpliSafeEvent => {
   const type: EventType | undefined = EVENT_MAPPING[eventData.eventCid];
   if (!type) {
     throw new Error(`Unknown eventCid: ${eventData.eventCid}`);

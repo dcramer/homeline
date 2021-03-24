@@ -40,7 +40,8 @@ export class Store {
 
     this.#logger = pino({
       name: "store",
-      prettyPrint: this.#debug ? { colorize: true } : undefined,
+      level: debug ? "debug" : "info",
+      prettyPrint: debug ? { colorize: true } : undefined,
     });
   }
 

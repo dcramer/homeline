@@ -34,6 +34,7 @@ export class Integration {
 
     this.logger = pino({
       name: this.constructor.name,
+      level: debug ? "debug" : "info",
       prettyPrint: debug ? { colorize: true } : undefined,
     });
   }

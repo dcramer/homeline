@@ -33,11 +33,12 @@ export class Broker {
 
     this.#logger = pino({
       name: "broker",
-      prettyPrint: this.#debug ? { colorize: true } : undefined,
+      level: debug ? "debug" : "info",
+      prettyPrint: debug ? { colorize: true } : undefined,
     });
   }
 
-  public init() {
+  init() {
     if (this.#client) return;
 
     this.#logger.info(`connecting to broker on mqtt://${this.#host}`);
@@ -112,20 +113,20 @@ export class Broker {
     process.on("SIGINT", () => onShutdown({ exit: true }));
   }
 
-  public destroy() {}
+  destroy() {}
 
-  public subscribe(topic: string, callback: MessageCallback) {
+  subscribe(topic: string, callback: MessageCallback) {
     this.#subscribers.push([topic, callback]);
   }
 
-  public unsubscribe(topic: string, callback: MessageCallback) {
+  unsubscribe(topic: string, callback: MessageCallback) {
     this.#subscribers = this.#subscribers.filter(([t, cb]) => {
       return t !== topic || cb !== callback;
     });
   }
 
-  public publish(topic: string, message: string | Buffer) {
+  publish(topic: string, message: any, serialize: boolean = true) {
     this.#logger.debug(`> ${topic}`);
-    this.#client!.publish(topic, message);
+    this.#client!.publish(topic, serialize ? JSON.stringify(message) : message);
   }
 }

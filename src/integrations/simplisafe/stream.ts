@@ -1,11 +1,12 @@
 import pino from "pino";
 import io from "socket.io-client";
+import EventEmitter from "events";
 
 import makeEvent from "./event";
 
 const WEBSOCKET_URL_BASE = "wss://api.simplisafe.com";
 
-export default class SimpliSafeStream {
+export default class SimpliSafeStream extends EventEmitter {
   #socket?: any;
   #accessToken?: string;
   #userId?: string;
@@ -41,19 +42,26 @@ export default class SimpliSafeStream {
   }
 
   onOpen = () => {
+    this.emit("open");
     this.#logger!.info("stream connection established");
   };
 
   onClose = () => {
+    this.emit("close");
     this.#logger!.info("stream connection closed");
   };
 
-  onError = (err: any) => {
+  onError = (err: Error) => {
+    this.emit("error", err);
     this.#logger!.error(err);
   };
 
   onEvent = (data: any) => {
-    const event = makeEvent(data);
-    this.#logger!.info(event.messageSubject);
+    try {
+      const event = makeEvent(data);
+    } catch (err) {
+      return this.#logger!.error(err);
+    }
+    this.emit("event", event);
   };
 }

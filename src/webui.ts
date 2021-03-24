@@ -18,6 +18,7 @@ export class WebUI {
 
     this.#logger = pino({
       name: "webui",
+      level: debug ? "debug" : "info",
       prettyPrint: debug ? { colorize: true } : undefined,
     });
 
