@@ -14,7 +14,6 @@ type IntegrationConfig = {
 
 export class Integration {
   #broker: Broker;
-  #state: State = {};
   #store: Store;
 
   public readonly logger: pino.Logger;

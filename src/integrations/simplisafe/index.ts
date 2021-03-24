@@ -3,8 +3,9 @@ import axios, { AxiosResponse } from "axios";
 import { Integration } from "../";
 import { AGENT } from "../../version";
 
+import SimpliSafeStream from "./stream";
+
 const APP_VERSION = "1.62.0";
-const WEBSOCKET_URL_BASE = "wss://api.simplisafe.com/socket.io";
 const API_URL_BASE = "https://api.simplisafe.com/v1/api";
 
 type SimpliSafeConfig = {
@@ -23,6 +24,7 @@ export default class SimpliSafeIntegration extends Integration {
 
   #state?: State;
   #apiUrl: string = API_URL_BASE;
+  #stream: SimpliSafeStream = new SimpliSafeStream();
 
   #ssClientId?: string;
   #ssDeviceId?: string;
@@ -86,8 +88,6 @@ export default class SimpliSafeIntegration extends Integration {
       accessToken: response!.data.access_token,
       refreshToken: response!.data.refresh_token,
     });
-
-    await this.verifyAuth();
   }
 
   async verifyAuth() {
@@ -102,11 +102,15 @@ export default class SimpliSafeIntegration extends Integration {
       },
     });
 
+    const userId = authResponse!.data.userId;
+
     await this.setState({
-      userId: authResponse!.data.userId,
+      userId,
     });
 
     this.logger.info(`Authenticated with SimpliSafe`);
+
+    this.#stream.init(accessToken, userId, this.logger);
   }
 
   async handleMFAChallenge(tokenResponse: AxiosResponse) {

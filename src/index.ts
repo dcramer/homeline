@@ -57,9 +57,6 @@ const main = ({ webPort, mqttHost, debug, configPath, cachePath }: Options) => {
   const broker = new Broker(mqttHost, { debug });
   broker.init();
 
-  const webui = new WebUI(webPort, { debug });
-  webui.listen();
-
   machineUuid((deviceUuid: string) => {
     const options = { debug, deviceUuid };
 
@@ -74,6 +71,9 @@ const main = ({ webPort, mqttHost, debug, configPath, cachePath }: Options) => {
       }
     });
   });
+
+  const webui = new WebUI(webPort, { debug });
+  webui.listen();
 };
 
 const argv = yargs(process.argv).options({
