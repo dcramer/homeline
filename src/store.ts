@@ -79,7 +79,7 @@ export class Store {
     this.saveState();
   }
 
-  async getState(namespace: string, callback: (state: State) => void) {
-    callback(this.#state[namespace] || {});
+  async getState(namespace: string) {
+    return this.#state[namespace] || {};
   }
 }

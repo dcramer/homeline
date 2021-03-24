@@ -63,7 +63,7 @@ export class Integration {
     await this.#store.setState(this.constructor.name, state);
   }
 
-  async getState(callback: (state: State) => void) {
-    await this.#store.getState(this.constructor.name, callback);
+  async getState() {
+    return await this.#store.getState(this.constructor.name);
   }
 }

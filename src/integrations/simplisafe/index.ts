@@ -3,6 +3,10 @@ import axios, { AxiosResponse } from "axios";
 import { Integration } from "../";
 import { AGENT } from "../../version";
 
+const APP_VERSION = "1.62.0";
+const WEBSOCKET_URL_BASE = "wss://api.simplisafe.com/socket.io";
+const API_URL_BASE = "https://api.simplisafe.com/v1/api";
+
 type SimpliSafeConfig = {
   username?: string;
   password?: string;
@@ -18,7 +22,7 @@ export default class SimpliSafeIntegration extends Integration {
   // public readonly config: SimpliSafeConfig = {};
 
   #state?: State;
-  #apiUrl: string = "https://api.simplisafe.com/v1/api";
+  #apiUrl: string = API_URL_BASE;
 
   #ssClientId?: string;
   #ssDeviceId?: string;
@@ -31,10 +35,24 @@ export default class SimpliSafeIntegration extends Integration {
     this.#ssClientId = `${AGENT}.WebApp.simplisafe.com`;
     this.#ssDeviceId = `WebApp; useragent="Safari 13.1 (SS-ID: {0}) / macOS 10.15.6"; uuid="${this.deviceUuid}"; id="${AGENT}"`;
 
-    await this.authenticate();
+    try {
+      await this.verifyAuth();
+    } catch (err) {
+      try {
+        await this.authenticate({
+          grant_type: "password",
+          username: this.config.username,
+          password: this.config.password,
+          app_version: APP_VERSION,
+          device_id: this.#ssDeviceId,
+        });
+      } catch (err) {
+        this.logger.error(`Authentication failed: ${err}`);
+      }
+    }
   }
 
-  async authenticate() {
+  async authenticate(payload = {}) {
     if (!this.config.username) {
       throw new Error("Missing username configuration");
     }
@@ -47,13 +65,9 @@ export default class SimpliSafeIntegration extends Integration {
 
     try {
       response = await axios.post(`${this.#apiUrl}/token`, {
-        grant_type: "password",
-        username: this.config.username,
-        password: this.config.password,
-        app_version: "1.62.0",
         client_id: this.#ssClientId,
-        device_id: this.#ssDeviceId,
         scope: "offline_access",
+        ...payload,
       });
     } catch (err) {
       if (!err.response) {
@@ -65,12 +79,34 @@ export default class SimpliSafeIntegration extends Integration {
         return await this.handleMFAChallenge(err.response);
       }
       this.logger.error(`Authentication failed: ${data.error_description}`);
+      return;
     }
 
-    this.setState({
-      access_token: response!.data.access_token,
-      refresh_token: response!.data.refresh_token,
+    await this.setState({
+      accessToken: response!.data.access_token,
+      refreshToken: response!.data.refresh_token,
     });
+
+    await this.verifyAuth();
+  }
+
+  async verifyAuth() {
+    const { accessToken } = await this.getState();
+    if (!accessToken) {
+      throw new Error("No access token");
+    }
+
+    const authResponse = await axios.get(`${this.#apiUrl}/authCheck`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    await this.setState({
+      userId: authResponse!.data.userId,
+    });
+
+    this.logger.info(`Authenticated with SimpliSafe`);
   }
 
   async handleMFAChallenge(tokenResponse: AxiosResponse) {
@@ -91,12 +127,20 @@ export default class SimpliSafeIntegration extends Integration {
         scope: "offline_access",
       });
     } catch (err) {
-      console.error(err);
+      this.logger.error(`Error fetching token post-MFA: ${err}`);
       throw err;
     }
 
     this.logger.info(
       "Check your email for an MFA link to complete authentication with SimpliSafe."
     );
+  }
+
+  async refreshToken() {
+    const { refreshToken } = await this.getState();
+    await this.authenticate({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    });
   }
 }
