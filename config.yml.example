@@ -1,0 +1,5 @@
+integrations:
+  - type: simplisafe
+    config:
+      username: foo
+      password: bar

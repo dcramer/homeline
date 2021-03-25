@@ -39,3 +39,12 @@ As service calls are made via MQTT events, they should follow a similar conventi
 - `simplisafe/sid/12345/sensor/front-door/cmd`
 
 The topic should include the entity that is being acted on, and the remainder of the parameters will be part of the event payload.
+
+## Integrations
+
+Integrations are written as simple classes that contain the ability to both publish and receive messages from an MQTT broker. In general, they are made up of two core patterns:
+
+- Ingesting data from an upstream source (such as websockets), to translate into MQTT data
+- Translating MQTT service calls into upstream API calls
+
+Integrations are typescript modules, currently packaged in the `integrations/` directory. Eventually these will be loadable anywhere (as long as they are a node module), and configured via the `config.yml` file.
