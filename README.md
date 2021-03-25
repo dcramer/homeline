@@ -35,10 +35,19 @@ Topics should be made up of the following components, in order:
 
 - the service name (e.g. `simplisafe`)
 - the system terminology (e.g. `system-id` or `sid`)
-- the system identifier (e.g. `12345`)
-- if applicable, the type of entity (e.g. `sensor`)
-- if applicable, the identifier of an entity (e.g. `my-doorbell`)
-- if applicable, the type of event (e.g. `ring`)
+- if available, the unique system identifier (e.g. `12345`)
+- if available, the human readable system identifier (e.g. `home`)
+
+When the event is related to an entity (such as a sensor), you should include the following:
+
+- the type of entity (e.g. `sensor`)
+- if available, the unique entity identifier (e.g. `13245`)
+- if available, the human readable entity identifier (e.g. `front-doorbell`)
+
+And lastly, some indicator for the type of event:
+
+- if applicable, the event name (e.g. `unlocked`)
+- otherwise, a generic update (e.g. `state`)
 
 All topic names should be:
 
