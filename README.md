@@ -78,7 +78,9 @@ e.g.
 }
 ```
 
-## Last Will
+TODO: Look at ESPHome for some prior art, as it has a lot of configurability and has similar kinds of goals.
+
+### Last Will
 
 TODO:
 
