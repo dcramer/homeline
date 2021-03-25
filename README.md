@@ -77,3 +77,15 @@ e.g.
   "state": "on"
 }
 ```
+
+## Last Will
+
+TODO:
+
+Need to determine the simplest way to provide last will behavior for entity status.
+
+## Integration Testing
+
+TODO:
+
+Need to determine the simplest way to ensure integrations can be tested using fixture data (think Ruby's `vcr` or Python's `responses`). Goal is speed-to-accuracy.
