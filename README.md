@@ -2,6 +2,8 @@
 
 Homeline is an MQTT-based solution for integrating your connected home devices into your smart home automation software. Instead of maintaining automation-specific integrations, homeline gives you a bridge which can work with any solution (Home Assistant, Homebridge, etc) with a simple and stable base backed by an MQTT broker.
 
+**This is still very much a WIP. If you are interested in contributing, or have feedback, please open an issue!**
+
 ## Topic Naming Conventions
 
 Topic naming in MQTT is a grab bag, so this is our take on it.
