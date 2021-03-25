@@ -24,7 +24,13 @@ const resolvePath = (filePath: string): string => {
   return filePath;
 };
 
-export class Store {
+export interface IStore {
+  init(): void;
+  setState(namespace: string, state: State): Promise<void>;
+  getState(namespace: string): Promise<State>;
+}
+
+export class Store implements IStore {
   #filepath: string;
   #state: State = {};
   #logger: pino.Logger;

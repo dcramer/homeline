@@ -119,3 +119,11 @@ e.g.
 ```
 
 TODO: Look at ESPHome for some prior art, as it has a lot of configurability and has similar kinds of goals.
+
+## Credit
+
+- Whoever did the work to reverse engineer SimpliSafe's API, allowing me to build a POC. Most of the work is heavily influenced by https://github.com/bachya/simplisafe-python.
+
+- Anyone who's shared their opinions on MQTT, how it should work, how it doesn't work, etc.
+
+- Infinite shitty connected devices with terrible APIs, inspiring me to take the matter into my own hands.

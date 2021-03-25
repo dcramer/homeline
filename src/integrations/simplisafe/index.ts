@@ -13,12 +13,23 @@ enum State {
   ready,
 }
 
+// TODO(dcramer): this is the equiv of docs right now, but it'd be great to explain to the
+// system that we will use this type for the getState()/setState() abstractions.
+type SimpliSafeState = {
+  accessToken?: string;
+  refreshToken?: string;
+  userId?: string;
+  defaultSystemId?: string;
+};
+
 export default class SimpliSafeIntegration extends Integration {
   // public readonly config: SimpliSafeConfig = {};
 
   readonly #topicPrefix: string = "simplisafe";
   #state?: State;
-  #api?: SimpliSafeApi;
+  #api: SimpliSafeApi = new SimpliSafeApi({
+    clientId: `${AGENT}.WebApp.simplisafe.com`,
+  });
   #stream: SimpliSafeStream = new SimpliSafeStream();
 
   #ssDeviceId?: string;
@@ -26,11 +37,7 @@ export default class SimpliSafeIntegration extends Integration {
   async init() {
     this.#ssDeviceId = `WebApp; useragent="Safari 13.1 (SS-ID: {0}) / macOS 10.15.6"; uuid="${this.deviceUuid}"; id="${AGENT}"`;
 
-    this.#api = new SimpliSafeApi({
-      clientId: `${AGENT}.WebApp.simplisafe.com`,
-    });
-
-    this.#stream.on("event", this.onEvent);
+    this.#stream.on("event", this.onSimpliSafeEvent);
 
     this.#state = State.authenticating;
     const { accessToken } = await this.getState();
@@ -41,17 +48,39 @@ export default class SimpliSafeIntegration extends Integration {
         this.#state = State.ready;
         this.#stream.init(accessToken, userId, this.logger);
       } catch (err) {
-        this.authenticate();
+        await this.authenticate();
       }
     } else {
-      this.authenticate();
+      await this.authenticate();
     }
+
+    if (this.#state === State.ready) {
+      await this.onReady();
+    }
+
+    this.subscribe(`simplisafe/#/cmd`);
   }
 
   formatTopicName = (name: string) =>
     name.toString().replace(/[_\s]/g, "-").toLowerCase();
 
-  onEvent = async (event: SimpliSafeEvent) => {
+  onReady = async () => {
+    this.logger.info("Fetching system configuration");
+    const { accessToken, userId } = await this.getState();
+    const systems = await this.#api.getSystems(accessToken, userId);
+    // TODO(dcramer): why can systems be undefined? is this a promise concept i dont grok?
+    if (systems!.length > 0) {
+      this.setState({ defaultSystemId: systems![0].sid });
+    }
+  };
+
+  onMessage = async (topic: string, message: string | Buffer) => {
+    // TODO(dcramer): need a convenience feature to parse a topic like a typical set of URL routes
+    // aka map simplisafe/sid/{system-id} into myFunctionNamme(args: {"system-id": ""})
+    this.logger.info(topic);
+  };
+
+  onSimpliSafeEvent = async (event: SimpliSafeEvent) => {
     let topic = `${this.#topicPrefix}/uid/${event.userId}/sid/${event.sid}`;
     if (event.sensorName) {
       topic += `/sensor/${event.sensorSerial}/${event.sensorName}`;
@@ -63,7 +92,7 @@ export default class SimpliSafeIntegration extends Integration {
 
   async authenticate() {
     try {
-      const result = await this.#api!.authenticate({
+      const result = await this.#api.authenticate({
         grant_type: "password",
         username: this.config.username,
         password: this.config.password,
@@ -72,7 +101,7 @@ export default class SimpliSafeIntegration extends Integration {
       });
 
       if (result.status === "authenticated") {
-        const { userId } = await this.#api!.verifyAuth(
+        const { userId } = await this.#api.verifyAuth(
           result.accessToken as string
         );
         await this.setState({
@@ -80,8 +109,13 @@ export default class SimpliSafeIntegration extends Integration {
           refreshToken: result.refreshToken,
           userId,
         });
+
         this.#state = State.ready;
         this.#stream.init(result.accessToken as string, userId, this.logger);
+
+        if (this.#state === State.ready) {
+          await this.onReady();
+        }
       } else if (result.status === "pending_mfa") {
         this.#state = State.pending_mfa;
 

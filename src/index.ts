@@ -44,6 +44,7 @@ const getIntegration = (name: string): typeof Integration => {
 
 const main = ({ webPort, mqttHost, debug, configPath, cachePath }: Options) => {
   process.on("uncaughtException", (err) => {
+    /* tslint:disable-next-line */
     console.error(err);
   });
 

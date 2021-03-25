@@ -1,11 +1,32 @@
 import axios, { AxiosResponse } from "axios";
 
-const API_URL_BASE = "https://api.simplisafe.com/v1/api";
+const API_URL_BASE = "https://api.simplisafe.com/v1";
 
 type AuthenticationResult = {
   status: string;
   accessToken?: string;
   refreshToken?: string;
+};
+
+enum AlarmState {
+  alarm,
+  alarm_count,
+  away,
+  away_count,
+  entry_delay,
+  error,
+  exit_delay,
+  home,
+  home_count,
+  off,
+  test,
+  unknown,
+}
+
+type SimpliSafeSystem = {
+  uid: number;
+  sid: number;
+  // many other attributes that dont seem to be relevant for typical usage
 };
 
 export default class SimpliSafeApi {
@@ -17,11 +38,48 @@ export default class SimpliSafeApi {
     this.#clientId = clientId;
   }
 
-  async authenticate(payload = {}) {
+  async setAlarmState(
+    accessToken: string,
+    systemId: string,
+    state: AlarmState
+  ) {
+    const response = await axios.get(
+      `${this.#apiUrl}/ss3/subscriptions/${systemId}/state/${AlarmState[
+        state
+      ].toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+  }
+
+  async getSystems(
+    accessToken: string,
+    userId: string
+  ): Promise<SimpliSafeSystem[]> {
+    const response = await axios.get(
+      `${this.#apiUrl}/users/${userId}/subscriptions`,
+      {
+        params: { activeOnly: "true" },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    return response.data.subscriptions.map((entry: SimpliSafeSystem) => ({
+      sid: entry.sid,
+      uid: entry.uid,
+    }));
+  }
+
+  async authenticate(payload = {}): Promise<AuthenticationResult> {
     let response: AxiosResponse;
 
     try {
-      response = await axios.post(`${this.#apiUrl}/token`, {
+      response = await axios.post(`${this.#apiUrl}/api/token`, {
         client_id: this.#clientId,
         scope: "offline_access",
         ...payload,
@@ -31,7 +89,7 @@ export default class SimpliSafeApi {
         throw err;
       }
       const data = err.response.data;
-      if (data.mfa_token) {
+      if (data && data.mfa_token) {
         return await this.handleMFAChallenge(err.response);
       }
       throw err;
@@ -41,24 +99,27 @@ export default class SimpliSafeApi {
       status: "authenticated",
       accessToken: response!.data.access_token,
       refreshToken: response!.data.refresh_token,
-    } as AuthenticationResult;
+    };
   }
 
-  async verifyAuth(accessToken: string) {
-    const authResponse = await axios.get(`${this.#apiUrl}/authCheck`, {
+  async verifyAuth(accessToken: string): Promise<{ userId: string }> {
+    const authResponse = await axios.get(`${this.#apiUrl}/api/authCheck`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
 
     const userId = authResponse!.data.userId;
+
     return {
       userId,
     };
   }
 
-  async handleMFAChallenge(tokenResponse: AxiosResponse) {
-    const response = await axios.post(`${this.#apiUrl}/mfa/challenge`, {
+  async handleMFAChallenge(
+    tokenResponse: AxiosResponse
+  ): Promise<AuthenticationResult> {
+    const response = await axios.post(`${this.#apiUrl}/api/mfa/challenge`, {
       challenge_type: "oob",
       client_id: this.#clientId,
       mfa_token: tokenResponse.data.mfa_token,
@@ -78,7 +139,7 @@ export default class SimpliSafeApi {
 
     return {
       status: "pending_mfa",
-    } as AuthenticationResult;
+    };
   }
 
   async refreshToken(refreshToken: string) {

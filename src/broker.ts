@@ -89,7 +89,7 @@ export class Broker {
           try {
             cb(message, topic);
           } catch (err) {
-            console.error(`[mqtt] error with message callback: ${err}`);
+            this.#logger.error(`Error with message callback: ${err}`);
           }
         }
       });
@@ -119,8 +119,6 @@ export class Broker {
     process.on("uncaughtException", () => onShutdown({ exit: true }));
     process.on("SIGINT", () => onShutdown({ exit: true }));
   }
-
-  destroy() {}
 
   subscribe(topic: string, callback: MessageCallback) {
     this.#subscribers.push([topic, callback]);

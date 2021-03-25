@@ -1,14 +1,13 @@
 import mqtt from "mqtt";
 import pino from "pino";
 
-import { Broker, MessageCallback } from "../broker";
-import { State, Store } from "../store";
+import { State, IStore } from "../store";
 import { AGENT } from "../version";
 
 type IntegrationOptions = {
   debug?: boolean;
-  mqttHost: string;
-  store: Store;
+  mqttHost?: string;
+  store: IStore;
   deviceUuid: string;
 };
 
@@ -21,8 +20,32 @@ type LastWill = {
   payload: string;
 };
 
-export class Integration {
-  #store: Store;
+interface IIntegration {
+  getCanonicalName(): string;
+
+  getLastWill(): LastWill | null;
+
+  init(): Promise<void>;
+
+  destroy(): Promise<void>;
+
+  onMessage(topic: string, message: string | Buffer): Promise<void>;
+
+  subscribe(topic: string): Promise<void>;
+
+  publish(topic: string, message: any, serialize?: boolean): Promise<void>;
+
+  log(message: any): void;
+
+  error(message: any): void;
+
+  setState(state: State): Promise<void>;
+
+  getState(): Promise<State>;
+}
+
+export class Integration implements IIntegration {
+  #store: IStore;
   #mqtt: mqtt.Client;
   #name: string;
 
@@ -31,7 +54,12 @@ export class Integration {
   public readonly config: IntegrationConfig = {};
 
   constructor(
-    { deviceUuid, mqttHost, store, debug = false }: IntegrationOptions,
+    {
+      deviceUuid,
+      store,
+      mqttHost = "localhost",
+      debug = false,
+    }: IntegrationOptions,
     config: IntegrationConfig = {}
   ) {
     this.#store = store;
@@ -94,10 +122,13 @@ export class Integration {
     return null;
   }
 
+  /* tslint:disable-next-line */
   async init() {}
 
+  /* tslint:disable-next-line */
   async destroy() {}
 
+  /* tslint:disable-next-line */
   async onMessage(topic: string, message: string | Buffer) {}
 
   async subscribe(topic: string) {
