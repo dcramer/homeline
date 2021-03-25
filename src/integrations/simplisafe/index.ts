@@ -16,6 +16,7 @@ enum State {
 export default class SimpliSafeIntegration extends Integration {
   // public readonly config: SimpliSafeConfig = {};
 
+  readonly #topicPrefix: string = "simplisafe";
   #state?: State;
   #api?: SimpliSafeApi;
   #stream: SimpliSafeStream = new SimpliSafeStream();
@@ -51,9 +52,9 @@ export default class SimpliSafeIntegration extends Integration {
     name.toString().replace(/[_\s]/g, "-").toLowerCase();
 
   onEvent = async (event: SimpliSafeEvent) => {
-    let topic = `simplisafe/sid/${event.sid}`;
+    let topic = `${this.#topicPrefix}/sid/${event.sid}`;
     if (event.sensorName) {
-      topic += `/sensor/${event.sensorName}`;
+      topic += `/sensor/${event.senderId}/${event.sensorName}`;
     }
     topic += `/${EventType[event.type]}`;
 
