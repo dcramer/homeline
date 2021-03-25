@@ -10,6 +10,7 @@ type ShutdownOptions = {
 
 type BrokerOptions = {
   debug?: boolean;
+  deviceUuid: string;
 };
 
 export type MessageCallback = (message: any, topic: string) => void;
@@ -21,15 +22,17 @@ export class Broker {
   #client?: mqtt.Client;
   #subscribers: Subscription[];
   #debug: boolean;
+  #deviceUuid: string;
   #logger: pino.Logger;
 
   constructor(
     host: string = "localhost:1833",
-    { debug = false }: BrokerOptions = {}
+    { deviceUuid, debug = false }: BrokerOptions
   ) {
     this.#host = host;
     this.#subscribers = [];
     this.#debug = debug;
+    this.#deviceUuid = deviceUuid;
 
     this.#logger = pino({
       name: "broker",
@@ -47,6 +50,12 @@ export class Broker {
       clientId: `${AGENT}_${Math.random().toString(16).substr(2, 8)}`,
       protocolId: "MQIsdp",
       protocolVersion: 3,
+      will: {
+        topic: `homeline/${this.#deviceUuid}/offline`,
+        payload: "",
+        qos: 0,
+        retain: false,
+      },
     });
 
     this.#client.on("error", (err: any) => {
@@ -72,7 +81,7 @@ export class Broker {
         this.#logger.info(`subscribe to ${t}`);
         this.#client!.subscribe(t);
       });
-      this.#client!.publish("homeline/connected", "true");
+      this.publish(`homeline/${this.#deviceUuid}/online`, "", false);
     });
 
     this.#client.on("message", (topic: string, message: any) => {
@@ -97,7 +106,7 @@ export class Broker {
       }
 
       if (cleanup) {
-        this.#client?.publish("homeline/connected", "false");
+        this.publish(`homeline/${this.#deviceUuid}/offline`, "", false);
       }
 
       if (exit) {

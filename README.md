@@ -31,11 +31,16 @@ integrations:
 
 Topic naming in MQTT is a grab bag, so this is our take on it.
 
+**Note: This spec is in flux based on opinions of folks with more domain experience than myself.**
+
 Topics should be made up of the following components, in order:
 
 - the service name (e.g. `simplisafe`)
-- the system terminology (e.g. `system-id` or `sid`)
-- if available, the unique system identifier (e.g. `12345`)
+- if a user identifier is available..
+  - a named constant for the type account (e.g. `uid`)
+  - a unique user identifier (e.g. `54321`) - this should be the upstream service user ID
+- a named constant for the type of device (e.g. `sid`)
+- a unique system identifier (e.g. `12345`) - if unavailable, this will be the device UUID
 - if available, the human readable system identifier (e.g. `home`)
 
 When the event is related to an entity (such as a sensor), you should include the following:
@@ -56,27 +61,39 @@ All topic names should be:
 
 For example, an update for a simplisafe door being unlocked:
 
-- `simplisafe/sid/12345/sensor/front-door/lock-unlocked`
+- `simplisafe/uid/54321/sid/12345/sensor/front-door/lock-unlocked`
 
 Or, the alarm being triggered:
 
-- `simplisafe/sid/12345/alarm-triggered`
+- `simplisafe/uid/54321/sid/12345/alarm-triggered`
+
+### Homeline's Internal Topic
+
+Homeline will publish its events using the following prefix:
+
+`homeline/[device-id]`
+
+For example, when homeline starts up, it will publish:
+
+`homeline/[device-id]/online`
+
+And upon teardown:
+
+`homeline/[device-id]/offline`
 
 ### Service Calls
 
 As service calls are made via MQTT events, they should follow a similar convention as other updates/events, but with a `cmd` notation:
 
-- `simplisafe/sid/12345/cmd`
+- `simplisafe/uid/54321/sid/12345/cmd`
 
-- `simplisafe/sid/12345/sensor/front-door/cmd`
+- `simplisafe/uid/54321/sid/12345/sensor/front-door/cmd`
 
 The topic should include the entity that is being acted on, and the remainder of the parameters will be part of the event payload.
 
 ## Entity Specifications
 
-TODO:
-
-This likely looks like a spec, including a fixed topic? to publish entities into known schemas so that a generic Home Assistant plugin can pick them up and register them appropriately.
+TODO: This likely looks like a spec, including a fixed topic? to publish entities into known schemas so that a generic Home Assistant plugin can pick them up and register them appropriately.
 
 e.g.
 
@@ -91,12 +108,10 @@ TODO: Look at ESPHome for some prior art, as it has a lot of configurability and
 
 ### Last Will
 
-TODO:
+TODO: Need to determine the simplest way to provide last will behavior for entity status.
 
-Need to determine the simplest way to provide last will behavior for entity status.
+TODO: Last Will appears to be one-per-client - that won't work. Do we need to register an MQTT client per Integration?
 
 ## Integration Testing
 
-TODO:
-
-Need to determine the simplest way to ensure integrations can be tested using fixture data (think Ruby's `vcr` or Python's `responses`). Goal is speed-to-accuracy.
+TODO: Need to determine the simplest way to ensure integrations can be tested using fixture data (think Ruby's `vcr` or Python's `responses`). Goal is speed-to-accuracy.

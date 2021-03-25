@@ -2,7 +2,7 @@ import pino from "pino";
 import io from "socket.io-client";
 import EventEmitter from "events";
 
-import makeEvent from "./event";
+import makeEvent, { SimpliSafeEvent } from "./event";
 
 const WEBSOCKET_URL_BASE = "wss://api.simplisafe.com";
 
@@ -57,8 +57,9 @@ export default class SimpliSafeStream extends EventEmitter {
   };
 
   onEvent = (data: any) => {
+    let event: SimpliSafeEvent;
     try {
-      const event = makeEvent(data);
+      event = makeEvent(data);
     } catch (err) {
       return this.#logger!.error(err);
     }

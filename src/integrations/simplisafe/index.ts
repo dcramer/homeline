@@ -52,9 +52,9 @@ export default class SimpliSafeIntegration extends Integration {
     name.toString().replace(/[_\s]/g, "-").toLowerCase();
 
   onEvent = async (event: SimpliSafeEvent) => {
-    let topic = `${this.#topicPrefix}/sid/${event.sid}`;
+    let topic = `${this.#topicPrefix}/uid/${event.userId}/sid/${event.sid}`;
     if (event.sensorName) {
-      topic += `/sensor/${event.senderId}/${event.sensorName}`;
+      topic += `/sensor/${event.sensorSerial}/${event.sensorName}`;
     }
     topic += `/${EventType[event.type]}`;
 

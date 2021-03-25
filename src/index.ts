@@ -43,6 +43,10 @@ const getIntegration = (name: string): typeof Integration => {
 };
 
 const main = ({ webPort, mqttHost, debug, configPath, cachePath }: Options) => {
+  process.on("uncaughtException", (err) => {
+    console.error(err);
+  });
+
   const logger = pino({
     name: "homeline",
     prettyPrint: debug ? { colorize: true } : undefined,
@@ -54,11 +58,11 @@ const main = ({ webPort, mqttHost, debug, configPath, cachePath }: Options) => {
   const store = new Store(cachePath, { debug });
   store.init();
 
-  const broker = new Broker(mqttHost, { debug });
-  broker.init();
-
   machineUuid((deviceUuid: string) => {
     const options = { debug, deviceUuid };
+
+    const broker = new Broker(mqttHost, options);
+    broker.init();
 
     globalConfig.integrations.forEach(async ({ type, config }) => {
       logger.info(`Registering integration ${type}`);
