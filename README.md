@@ -62,3 +62,18 @@ As service calls are made via MQTT events, they should follow a similar conventi
 - `simplisafe/sid/12345/sensor/front-door/cmd`
 
 The topic should include the entity that is being acted on, and the remainder of the parameters will be part of the event payload.
+
+## Entity Specifications
+
+TODO:
+
+This likely looks like a spec, including a fixed topic? to publish entities into known schemas so that a generic Home Assistant plugin can pick them up and register them appropriately.
+
+e.g.
+
+```json
+{
+  "type": "light",
+  "state": "on"
+}
+```
