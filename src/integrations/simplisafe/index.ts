@@ -55,7 +55,7 @@ export default class SimpliSafeIntegration extends Integration {
     if (event.sensorName) {
       topic += `/sensor/${event.sensorName}`;
     }
-    topic += `/event/${EventType[event.type]}`;
+    topic += `/${EventType[event.type]}`;
 
     await this.publish(this.formatTopicName(topic), event);
   };
