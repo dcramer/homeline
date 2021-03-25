@@ -4,6 +4,29 @@ Homeline is an MQTT-based solution for integrating your connected home devices i
 
 **This is still very much a WIP. If you are interested in contributing, or have feedback, please open an issue!**
 
+## Integrations
+
+Integrations are written as simple classes that contain the ability to both publish and receive messages from an MQTT broker. In general, they are made up of two core patterns:
+
+- Ingesting data from an upstream source (such as websockets), to translate into MQTT data
+- Translating MQTT service calls into upstream API calls
+
+Integrations are typescript modules, currently packaged in the `integrations/` directory. Eventually these will be loadable anywhere (as long as they are a node module), and configured via the `config.yml` file. Eventually, we expect configuration to look like the following:
+
+```yaml
+integrations:
+  - id: identifier
+    module: npm-package
+    # module: ./path/to/npm-package
+    config:
+      username: foo
+      password: bar
+```
+
+- Configuration is a list to allow control over load order.
+- The `id` will primarily be used for internal references, such as logging.
+- The `module` param will allow either a known npm module (e.g. valid in `node_modules` via `npm install`) or a path on disk to a valid module.
+
 ## Topic Naming Conventions
 
 Topic naming in MQTT is a grab bag, so this is our take on it.
@@ -39,12 +62,3 @@ As service calls are made via MQTT events, they should follow a similar conventi
 - `simplisafe/sid/12345/sensor/front-door/cmd`
 
 The topic should include the entity that is being acted on, and the remainder of the parameters will be part of the event payload.
-
-## Integrations
-
-Integrations are written as simple classes that contain the ability to both publish and receive messages from an MQTT broker. In general, they are made up of two core patterns:
-
-- Ingesting data from an upstream source (such as websockets), to translate into MQTT data
-- Translating MQTT service calls into upstream API calls
-
-Integrations are typescript modules, currently packaged in the `integrations/` directory. Eventually these will be loadable anywhere (as long as they are a node module), and configured via the `config.yml` file.
