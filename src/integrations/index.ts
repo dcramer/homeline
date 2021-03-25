@@ -16,6 +16,11 @@ type IntegrationConfig = {
   [name: string]: any;
 };
 
+type LastWill = {
+  topic: string;
+  payload: string;
+};
+
 export class Integration {
   #store: Store;
   #mqtt: mqtt.Client;
@@ -41,20 +46,21 @@ export class Integration {
       prettyPrint: debug ? { colorize: true } : undefined,
     });
 
+    const lastWill = this.getLastWill();
+
     this.#mqtt = mqtt.connect(`mqtt://${mqttHost}`, {
       clientId: `${AGENT}/_${Math.random().toString(16).substr(2, 8)}+${
         this.#name
       }`,
-      // TODO(dcramer): need to understand if we can drop this and/or allow this to be configurable as its
-      // very server specific. Docs/internet seems to suggset mosquitto (current) shouldn't need this, but...
-      // protocolId: "MQIsdp",
-      // protocolVersion: 3,
-      // will: {
-      //   topic: `${this.#name}/${deviceUuid}/offline`,
-      //   payload: "",
-      //   qos: 0,
-      //   retain: false,
-      // },
+      ...(lastWill
+        ? {
+            will: {
+              qos: 0,
+              retain: false,
+              ...lastWill,
+            },
+          }
+        : {}),
     });
 
     this.#mqtt.on("error", (err: any) => {
@@ -82,6 +88,10 @@ export class Integration {
 
   getCanonicalName() {
     return this.constructor.name.replace(/Integration$/, "").toLowerCase();
+  }
+
+  getLastWill(): LastWill | null {
+    return null;
   }
 
   async init() {}

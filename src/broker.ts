@@ -48,8 +48,6 @@ export class Broker {
 
     this.#client = mqtt.connect(`mqtt://${this.#host}`, {
       clientId: `${AGENT}_${Math.random().toString(16).substr(2, 8)}`,
-      protocolId: "MQIsdp",
-      protocolVersion: 3,
       will: {
         topic: `homeline/${this.#deviceUuid}/offline`,
         payload: "",
