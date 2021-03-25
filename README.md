@@ -27,6 +27,18 @@ integrations:
 - The `id` will primarily be used for internal references, such as logging.
 - The `module` param will allow either a known npm module (e.g. valid in `node_modules` via `npm install`) or a path on disk to a valid module.
 
+### Implementation
+
+An integration extends the `src/integrations/Integration` class (see examples for details) and manages its own lifecycle from there. It has access to a self-isolated instance of an MQTT client, allowing it to own its own subscriptions, as well as provide a Last Will.
+
+### Last Will
+
+TODO: Need to determine the simplest way to provide last will behavior for entity status.
+
+### Testing
+
+TODO: Need to determine the simplest way to ensure integrations can be tested using fixture data (think Ruby's `vcr` or Python's `responses`). Goal is speed-to-accuracy.
+
 ## Topic Naming Conventions
 
 Topic naming in MQTT is a grab bag, so this is our take on it.
@@ -67,6 +79,16 @@ Or, the alarm being triggered:
 
 - `simplisafe/uid/54321/sid/12345/alarm-triggered`
 
+### Service Calls
+
+As service calls are made via MQTT events, they should follow a similar convention as other updates/events, but with a `cmd` notation:
+
+- `simplisafe/uid/54321/sid/12345/cmd`
+
+- `simplisafe/uid/54321/sid/12345/sensor/front-door/cmd`
+
+The topic should include the entity that is being acted on, and the remainder of the parameters will be part of the event payload.
+
 ### Homeline's Internal Topic
 
 Homeline will publish its events using the following prefix:
@@ -81,15 +103,7 @@ And upon teardown:
 
 `homeline/[device-id]/offline`
 
-### Service Calls
-
-As service calls are made via MQTT events, they should follow a similar convention as other updates/events, but with a `cmd` notation:
-
-- `simplisafe/uid/54321/sid/12345/cmd`
-
-- `simplisafe/uid/54321/sid/12345/sensor/front-door/cmd`
-
-The topic should include the entity that is being acted on, and the remainder of the parameters will be part of the event payload.
+TODO: We should publish an integration specific status to the central homeline topic. e.g. `homeline/[device-id]/integration/simplisafe/enabled`
 
 ## Entity Specifications
 
@@ -105,13 +119,3 @@ e.g.
 ```
 
 TODO: Look at ESPHome for some prior art, as it has a lot of configurability and has similar kinds of goals.
-
-### Last Will
-
-TODO: Need to determine the simplest way to provide last will behavior for entity status.
-
-TODO: Last Will appears to be one-per-client - that won't work. Do we need to register an MQTT client per Integration?
-
-## Integration Testing
-
-TODO: Need to determine the simplest way to ensure integrations can be tested using fixture data (think Ruby's `vcr` or Python's `responses`). Goal is speed-to-accuracy.

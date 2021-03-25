@@ -59,15 +59,19 @@ const main = ({ webPort, mqttHost, debug, configPath, cachePath }: Options) => {
   store.init();
 
   machineUuid((deviceUuid: string) => {
-    const options = { debug, deviceUuid };
-
-    const broker = new Broker(mqttHost, options);
+    // TODO(dcramer): unclear if we should still keep this as a centralized broker as we had
+    // to move the MQTT clients into each integration (so they can manage their own 'last will').
+    // There _is_ value in treating this as a broker still, as we may need to run integrations
+    // out of band.
+    const brokerOptions = { debug, deviceUuid };
+    const broker = new Broker(mqttHost, brokerOptions);
     broker.init();
 
+    const integrationOptions = { mqttHost, store, debug, deviceUuid };
     globalConfig.integrations.forEach(async ({ type, config }) => {
       logger.info(`Registering integration ${type}`);
       const cls = getIntegration(type);
-      const integration = new cls(broker, store, options, config);
+      const integration = new cls(integrationOptions, config);
       try {
         await integration.init();
       } catch (err) {

@@ -1,10 +1,14 @@
+import mqtt from "mqtt";
 import pino from "pino";
 
 import { Broker, MessageCallback } from "../broker";
 import { State, Store } from "../store";
+import { AGENT } from "../version";
 
 type IntegrationOptions = {
   debug?: boolean;
+  mqttHost: string;
+  store: Store;
   deviceUuid: string;
 };
 
@@ -13,42 +17,87 @@ type IntegrationConfig = {
 };
 
 export class Integration {
-  #broker: Broker;
   #store: Store;
+  #mqtt: mqtt.Client;
+  #name: string;
 
   public readonly logger: pino.Logger;
   public readonly deviceUuid: string;
   public readonly config: IntegrationConfig = {};
 
   constructor(
-    broker: Broker,
-    store: Store,
-    { deviceUuid, debug = false }: IntegrationOptions,
+    { deviceUuid, mqttHost, store, debug = false }: IntegrationOptions,
     config: IntegrationConfig = {}
   ) {
-    this.#broker = broker;
     this.#store = store;
+    this.#name = this.getCanonicalName();
 
     this.config = config;
     this.deviceUuid = deviceUuid;
 
     this.logger = pino({
-      name: this.constructor.name,
+      name: this.#name,
       level: debug ? "debug" : "info",
       prettyPrint: debug ? { colorize: true } : undefined,
     });
+
+    this.#mqtt = mqtt.connect(`mqtt://${mqttHost}`, {
+      clientId: `${AGENT}/_${Math.random().toString(16).substr(2, 8)}+${
+        this.#name
+      }`,
+      // TODO(dcramer): need to understand if we can drop this and/or allow this to be configurable as its
+      // very server specific. Docs/internet seems to suggset mosquitto (current) shouldn't need this, but...
+      // protocolId: "MQIsdp",
+      // protocolVersion: 3,
+      // will: {
+      //   topic: `${this.#name}/${deviceUuid}/offline`,
+      //   payload: "",
+      //   qos: 0,
+      //   retain: false,
+      // },
+    });
+
+    this.#mqtt.on("error", (err: any) => {
+      this.logger.error(err);
+    });
+
+    // this.#mqtt.on("connect", (packet: any) => {
+    //   const topics = new Set(this.#subscribers.map(([t]) => t));
+    //   topics.forEach((t) => {
+    //     this.#logger.info(`subscribe to ${t}`);
+    //     this.#client!.subscribe(t);
+    //   });
+    //   this.publish(`homeline/${this.#deviceUuid}/online`, "", false);
+    // });
+
+    this.#mqtt.on("message", (topic: string, message: any) => {
+      this.logger.debug(`< ${topic}`);
+      try {
+        this.onMessage(topic, message);
+      } catch (err) {
+        this.logger.error(`Error with message callback: ${err}`);
+      }
+    });
+  }
+
+  getCanonicalName() {
+    return this.constructor.name.replace(/Integration$/, "").toLowerCase();
   }
 
   async init() {}
 
   async destroy() {}
 
-  async subscribe(topic: string, callback: MessageCallback) {
-    this.#broker.subscribe(topic, callback);
+  async onMessage(topic: string, message: string | Buffer) {}
+
+  async subscribe(topic: string) {
+    this.logger.debug(`subscribed to ${topic}`);
+    this.#mqtt.subscribe(topic);
   }
 
-  async publish(topic: string, message: any) {
-    this.#broker.publish(topic, message);
+  async publish(topic: string, message: any, serialize = true) {
+    this.logger.debug(`> ${topic}`);
+    this.#mqtt.publish(topic, serialize ? JSON.stringify(message) : message);
   }
 
   log(message: any): void {
