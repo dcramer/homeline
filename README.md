@@ -27,9 +27,39 @@ integrations:
 - The `id` will primarily be used for internal references, such as logging.
 - The `module` param will allow either a known npm module (e.g. valid in `node_modules` via `npm install`) or a path on disk to a valid module.
 
-### Implementation
+### API
 
 An integration extends the `src/integrations/Integration` class (see examples for details) and manages its own lifecycle from there. It has access to a self-isolated instance of an MQTT client, allowing it to own its own subscriptions, as well as provide a Last Will.
+
+```typescript
+class MyIntegration extends Integration {
+  init() {}
+}
+```
+
+A common need is to subscribe to an MQTT topic, for example to allow service calls. To do this a routing abstraction exists similar to traditional web frameworks:
+
+```typescript
+type RouteMatch = {
+  topic: string;
+  pattern: string;
+  params: {
+    [key: string]: any;
+  };
+};
+
+class MyIntegration extends Integration {
+  init() {
+    this.route("simplisafe/#/sensor/{sensorId}/cmd", this.onSensorCommand);
+  }
+
+  onSensorCommand = (route: RouteMatch, message: string | Buffer) => {
+    // ...
+  };
+}
+```
+
+Note: The parameter (`{sensorId}`) maps to only a single-level entry. That is, it is naively replaced by `+` when capturing the topic pattern.
 
 ### Last Will
 
@@ -39,7 +69,7 @@ TODO: Need to determine the simplest way to provide last will behavior for entit
 
 TODO: Need to determine the simplest way to ensure integrations can be tested using fixture data (think Ruby's `vcr` or Python's `responses`). Goal is speed-to-accuracy.
 
-## Topic Naming Conventions
+## MQTT Conventions
 
 Topic naming in MQTT is a grab bag, so this is our take on it.
 
@@ -79,15 +109,39 @@ Or, the alarm being triggered:
 
 - `simplisafe/uid/54321/sid/12345/alarm-triggered`
 
-### Service Calls
+### Commands
 
-As service calls are made via MQTT events, they should follow a similar convention as other updates/events, but with a `cmd` notation:
+As commands (or service calls) are made via MQTT events, they should follow a similar convention as other updates/events, but with a `cmd` suffix notation:
 
 - `simplisafe/uid/54321/sid/12345/cmd`
 
 - `simplisafe/uid/54321/sid/12345/sensor/front-door/cmd`
 
 The topic should include the entity that is being acted on, and the remainder of the parameters will be part of the event payload.
+
+Command payloads are expected to conform to the following schema:
+
+```json
+{
+  "id": "uuid",
+  "name": "command-name",
+  "data": {
+    "param-name": "param-value"
+  }
+}
+```
+
+Or in typescript notation:
+
+```typescript
+type CommandPayload = {
+  id?: string;
+  name: string;
+  data: {
+    [key: string]: any;
+  };
+};
+```
 
 ### Homeline's Internal Topic
 

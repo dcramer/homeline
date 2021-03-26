@@ -1,4 +1,4 @@
-import { Integration } from "../";
+import { Integration, MessageCallback } from "../";
 import { AGENT } from "../../version";
 
 import SimpliSafeApi from "./api";
@@ -58,8 +58,19 @@ export default class SimpliSafeIntegration extends Integration {
       await this.onReady();
     }
 
-    this.subscribe(`simplisafe/#/cmd`);
+    await this.route(
+      `simplisafe/uid/<userId>/sid/<systemId>/cmd`,
+      this.onSystemCommand
+    );
+    // this.route(
+    //   `simplisafe/uid/<userId>/sid/<systemId>/sensor/<sensorSerial>/+/cmd`,
+    //   this.onSensorCommand
+    // );
   }
+
+  onSystemCommand: MessageCallback = async ({ params }, message) => {
+    const payload = this.parseCommand(message);
+  };
 
   formatTopicName = (name: string) =>
     name.toString().replace(/[_\s]/g, "-").toLowerCase();

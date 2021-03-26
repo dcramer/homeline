@@ -20,6 +20,34 @@ type LastWill = {
   payload: string;
 };
 
+export type MessageCallback = (
+  route: RouteInfo,
+  message: string | Buffer
+) => Promise<void>;
+
+type Route = {
+  match: string;
+  regex: RegExp;
+  mqttTopic: string;
+  callback: MessageCallback;
+};
+
+export type RouteInfo = {
+  route: Route;
+  topic: string;
+  params: {
+    [key: string]: string;
+  };
+};
+
+export type CommandPayload = {
+  id?: string;
+  name: string;
+  data: {
+    [key: string]: any;
+  };
+};
+
 interface IIntegration {
   getCanonicalName(): string;
 
@@ -44,10 +72,18 @@ interface IIntegration {
   getState(): Promise<State>;
 }
 
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#escaping
+// XX(dcramer): why is this not stdlib?
+const escapeRegExp = (str: string) => {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+};
+
 export class Integration implements IIntegration {
   #store: IStore;
   #mqtt: mqtt.Client;
   #name: string;
+
+  private routes: Route[] = [];
 
   public readonly logger: pino.Logger;
   public readonly deviceUuid: string;
@@ -114,6 +150,12 @@ export class Integration implements IIntegration {
     });
   }
 
+  /* tslint:disable-next-line */
+  async init() {}
+
+  /* tslint:disable-next-line */
+  async destroy() {}
+
   getCanonicalName() {
     return this.constructor.name.replace(/Integration$/, "").toLowerCase();
   }
@@ -122,14 +164,51 @@ export class Integration implements IIntegration {
     return null;
   }
 
-  /* tslint:disable-next-line */
-  async init() {}
+  async route(match: string, callback: MessageCallback) {
+    const regexPattern = match.replace(/\/\{([^]+)\}\//g, (_, paramName) => {
+      return `\\/(?<${escapeRegExp(paramName)}>[^\/]+)\\/`;
+    });
+    const mqttTopic = match.replace(/\/\{([^]+)\}\//g, "+");
+
+    this.routes.push({
+      match,
+      regex: new RegExp(regexPattern, "gi"),
+      mqttTopic,
+      callback,
+    });
+
+    this.logger.debug(`subscribed to ${mqttTopic}`);
+    await this.subscribe(mqttTopic);
+  }
 
   /* tslint:disable-next-line */
-  async destroy() {}
+  async onMessage(topic: string, message: string | Buffer) {
+    for (let i = 0, route, match; i < this.routes.length; i++) {
+      route = this.routes[i];
+      match = topic.match(route.regex);
+      if (!match) {
+        continue;
+      }
+      try {
+        const routeInfo = {
+          route,
+          topic,
+          params: match.groups ?? {},
+        };
+        await route.callback(routeInfo, message);
+      } catch (err) {
+        this.logger.error(`Error with route handler: ${err}`);
+      }
+      break;
+    }
 
-  /* tslint:disable-next-line */
-  async onMessage(topic: string, message: string | Buffer) {}
+    this.logger.warn(`No route for ${topic}`);
+  }
+
+  parseCommand(message: string | Buffer): CommandPayload {
+    const payload = JSON.parse(message.toString()) as CommandPayload;
+    return payload;
+  }
 
   async subscribe(topic: string) {
     this.logger.debug(`subscribed to ${topic}`);
