@@ -164,6 +164,20 @@ type CommandPayload = {
 };
 ```
 
+#### Command Errors
+
+Errors from commands - when possible - will be routed to the following topic:
+
+`[original-command-topic]/cid/[command-id]/error`
+
+If a command ID is not present in the original payload, the topic will be truncated to:
+
+`[original-command-topic]/error`
+
+As an example, an error topic may look like the following:
+
+`simplisafe/uid/54321/sid/12345/sensor/front-door/cmd/error`
+
 ### Homeline's Internal Topic
 
 Homeline will publish its events using the following prefix:

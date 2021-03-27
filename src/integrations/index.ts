@@ -182,9 +182,28 @@ export class Integration implements IIntegration {
     await this.route(
       match,
       async (routeInfo: RouteInfo, message: string | Buffer) => {
-        const payload = this.parseCommand(message);
-        await callback(routeInfo, payload);
+        let payload: CommandPayload | undefined;
+        try {
+          payload = this.parseCommand(message);
+          await callback(routeInfo, payload);
+        } catch (err) {
+          await this.onCommandError(routeInfo, payload, err);
+        }
       }
+    );
+  }
+
+  async onCommandError(
+    routeInfo: RouteInfo,
+    payload: CommandPayload | undefined,
+    err: Error
+  ) {
+    this.logger.error(
+      `Error executing command '${payload?.name || ""}': ${err}`
+    );
+    this.publish(
+      `${routeInfo.topic}/${payload?.id ? `cid/${payload.id}` : ""}/error`,
+      payload
     );
   }
 
