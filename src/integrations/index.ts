@@ -48,7 +48,7 @@ export type RouteInfo = {
 export type CommandPayload = {
   id?: string;
   name: string;
-  data: {
+  data?: {
     [key: string]: any;
   };
 };
@@ -136,15 +136,6 @@ export class Integration implements IIntegration {
       this.logger.error(err);
     });
 
-    // this.#mqtt.on("connect", (packet: any) => {
-    //   const topics = new Set(this.#subscribers.map(([t]) => t));
-    //   topics.forEach((t) => {
-    //     this.#logger.info(`subscribe to ${t}`);
-    //     this.#client!.subscribe(t);
-    //   });
-    //   this.publish(`homeline/${this.#deviceUuid}/online`, "", false);
-    // });
-
     this.#mqtt.on("message", (topic: string, message: any) => {
       this.logger.debug(`< ${topic}`);
       try {
@@ -170,14 +161,16 @@ export class Integration implements IIntegration {
   }
 
   async route(match: string, callback: MessageCallback) {
-    const regexPattern = match.replace(/\/\{([^]+)\}\//g, (_, paramName) => {
+    const paramRegex = /\/\<([^\>]+)\>\//g;
+
+    const regexPattern = match.replace(paramRegex, (_, paramName) => {
       return `\\/(?<${escapeRegExp(paramName)}>[^\/]+)\\/`;
     });
-    const mqttTopic = match.replace(/\/\{([^]+)\}\//g, "+");
+    const mqttTopic = match.replace(paramRegex, "/+/");
 
     this.routes.push({
       match,
-      regex: new RegExp(regexPattern, "gi"),
+      regex: new RegExp(regexPattern, "i"),
       mqttTopic,
       callback,
     });
@@ -203,6 +196,7 @@ export class Integration implements IIntegration {
       if (!match) {
         continue;
       }
+
       try {
         const routeInfo = {
           route,
@@ -210,6 +204,7 @@ export class Integration implements IIntegration {
           params: match.groups ?? {},
         };
         await route.callback(routeInfo, message);
+        return;
       } catch (err) {
         this.logger.error(`Error with route handler: ${err}`);
       }
@@ -225,7 +220,7 @@ export class Integration implements IIntegration {
   }
 
   async subscribe(topic: string) {
-    this.logger.debug(`subscribed to ${topic}`);
+    this.logger.debug(`Subscribed to ${topic}`);
     this.#mqtt.subscribe(topic);
   }
 

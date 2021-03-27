@@ -43,10 +43,11 @@ export default class SimpliSafeApi {
     systemId: string,
     state: AlarmState
   ) {
-    const response = await axios.get(
+    const response = await axios.post(
       `${this.#apiUrl}/ss3/subscriptions/${systemId}/state/${AlarmState[
         state
       ].toString()}`,
+      undefined,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,

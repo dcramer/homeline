@@ -148,7 +148,7 @@ Or in typescript notation:
 type CommandPayload = {
   id?: string;
   name: string;
-  data: {
+  data?: {
     [key: string]: any;
   };
 };

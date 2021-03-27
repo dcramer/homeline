@@ -33,7 +33,7 @@ export class WebUI {
 
   listen() {
     this.#app.listen(this.#port, () => {
-      this.#logger.info(`listening on http://localhost:${this.#port}`);
+      this.#logger.info(`Listening on http://localhost:${this.#port}`);
     });
   }
 }

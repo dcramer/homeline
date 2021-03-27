@@ -44,7 +44,7 @@ export class Broker {
   init() {
     if (this.#client) return;
 
-    this.#logger.info(`connecting to broker on mqtt://${this.#host}`);
+    this.#logger.info(`Connecting to broker on mqtt://${this.#host}`);
 
     this.#client = mqtt.connect(`mqtt://${this.#host}`, {
       clientId: `${AGENT}_${Math.random().toString(16).substr(2, 8)}`,
@@ -61,19 +61,19 @@ export class Broker {
     });
 
     this.#client.on("close", () => {
-      this.#logger.info(`disconnected: closed`);
+      this.#logger.info(`Disconnected: closed`);
     });
 
     this.#client.on("disconnect", () => {
-      this.#logger.info(`disconnected: packet`);
+      this.#logger.info(`Disconnected: packet`);
     });
 
     this.#client.on("reconnect", () => {
-      this.#logger.info(`reconnecting`);
+      this.#logger.info(`Reconnecting`);
     });
 
     this.#client.on("connect", (packet: any) => {
-      this.#logger.info("connected");
+      this.#logger.info("Connected");
       const topics = new Set(this.#subscribers.map(([t]) => t));
       topics.forEach((t) => {
         this.#logger.info(`subscribe to ${t}`);

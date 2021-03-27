@@ -43,12 +43,12 @@ export default class SimpliSafeStream extends EventEmitter {
 
   onOpen = () => {
     this.emit("open");
-    this.#logger!.info("stream connection established");
+    this.#logger!.info("Stream connection established");
   };
 
   onClose = () => {
     this.emit("close");
-    this.#logger!.info("stream connection closed");
+    this.#logger!.info("Stream connection closed");
   };
 
   onError = (err: Error) => {

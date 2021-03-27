@@ -91,19 +91,18 @@ export default class SimpliSafeIntegration extends Integration {
     name.toString().replace(/[_\s]/g, "-").toLowerCase();
 
   onReady = async () => {
-    this.logger.info("Fetching system configuration");
     const { accessToken, userId } = await this.getState();
+    this.logger.info(`Authenticated as user ID: ${userId}`);
     const systems = await this.#api.getSystems(accessToken, userId);
     // TODO(dcramer): why can systems be undefined? is this a promise concept i dont grok?
     if (systems!.length > 0) {
       this.setState({ defaultSystemId: systems![0].sid });
     }
-  };
-
-  onMessage = async (topic: string, message: string | Buffer) => {
-    // TODO(dcramer): need a convenience feature to parse a topic like a typical set of URL routes
-    // aka map simplisafe/sid/{system-id} into myFunctionNamme(args: {"system-id": ""})
-    this.logger.info(topic);
+    this.logger.info(
+      `Discovered ${systems.length} system(s) - IDs: ${systems
+        .map((s) => s.sid)
+        .join(", ")}`
+    );
   };
 
   onSimpliSafeEvent = async (event: SimpliSafeEvent) => {
