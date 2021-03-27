@@ -2,15 +2,17 @@ import yargs from "yargs/yargs";
 import machineUuid from "machine-uuid";
 import YAML from "yaml";
 import fs from "fs";
+import path from "path";
 import pino from "pino";
 
 import { Broker } from "./broker";
 import { Store } from "./store";
 import { WebUI } from "./webui";
+import { RethrownError } from "./utils/errors";
 
 import { Integration } from "./integrations";
-import EchoIntegration from "./integrations/echo";
-import SimpliSafeIntegration from "./integrations/simplisafe";
+
+class IntegrationLoadError extends RethrownError {}
 
 type Options = {
   webPort: number;
@@ -21,7 +23,8 @@ type Options = {
 };
 
 type ConfigIntegrationEntry = {
-  type: string;
+  id: string;
+  module: string;
   config: {
     [name: string]: any;
   };
@@ -31,14 +34,33 @@ type Config = {
   integrations: ConfigIntegrationEntry[];
 };
 
-const getIntegration = (name: string): typeof Integration => {
-  switch (name) {
-    case "simplisafe":
-      return SimpliSafeIntegration;
-    case "echo":
-      return EchoIntegration;
-    default:
-      throw new Error(`Invalid integration: ${name}`);
+const getIntegration = (
+  rootPath: string,
+  moduleName: string
+): typeof Integration => {
+  let modulePath: string;
+  if (moduleName.indexOf("/") === 0) {
+    modulePath = moduleName;
+  } else if (moduleName.indexOf("./") === 0) {
+    modulePath = path.resolve(`${rootPath}/${moduleName}`);
+    // XXX: this makes it so we can load our own integrations during development
+  } else if (moduleName.indexOf("homeline/integrations") === 0) {
+    modulePath = path.resolve(`${__dirname}/${moduleName.substr(9)}`);
+  } else {
+    modulePath = moduleName;
+  }
+  try {
+    const module = require(modulePath);
+    if (!module) {
+      throw new Error("Module not found");
+    }
+    const cls = module.default;
+    if (typeof cls !== "function") {
+      throw new Error("Integration did not export a function");
+    }
+    return cls;
+  } catch (err) {
+    throw new IntegrationLoadError(`Invalid integration: ${module}`, err);
   }
 };
 
@@ -68,12 +90,14 @@ const main = ({ webPort, mqttHost, debug, configPath, cachePath }: Options) => {
     const broker = new Broker(mqttHost, brokerOptions);
     broker.init();
 
+    const rootPath = process.cwd();
+
     const integrationOptions = { mqttHost, store, debug, deviceUuid };
-    globalConfig.integrations.forEach(async ({ type, config }) => {
-      logger.info(`Registering integration ${type}`);
-      const cls = getIntegration(type);
-      const integration = new cls(integrationOptions, config);
+    globalConfig.integrations.forEach(async ({ id, module, config }) => {
+      logger.info(`Registering integration ${id}`);
       try {
+        const cls = getIntegration(rootPath, module);
+        const integration = new cls(integrationOptions, config);
         await integration.init();
       } catch (err) {
         logger.error(err);

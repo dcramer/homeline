@@ -27,7 +27,7 @@ Integrations are typescript modules, currently packaged in the `integrations/` d
 integrations:
   - id: identifier
     module: npm-package
-    # module: ./path/to/npm-package
+    # module: ./path/to/node-module
     config:
       username: foo
       password: bar

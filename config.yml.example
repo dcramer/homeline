@@ -1,5 +1,8 @@
 integrations:
-  - type: simplisafe
+  - id: echo
+    module: homeline/integrations/echo
+  - id: simplisafe
+    module: homeline/integrations/simplisafe
     config:
       username: foo
       password: bar
