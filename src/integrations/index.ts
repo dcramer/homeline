@@ -182,7 +182,6 @@ export class Integration implements IIntegration {
       callback,
     });
 
-    this.logger.debug(`subscribed to ${mqttTopic}`);
     await this.subscribe(mqttTopic);
   }
 
