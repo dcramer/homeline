@@ -4,6 +4,16 @@ Homeline is an MQTT-based solution for integrating your connected home devices i
 
 **This is still very much a WIP. If you are interested in contributing, or have feedback, please open an issue!**
 
+## Why
+
+A bit of backstory...
+
+I have a bunch of automations written in AppDaemon that run using Home Assistant. This has allowed me to respond to state and write more complex integrations (such as automatic alarm management based on other information), that are otherwise difficult with the native controls in HA. These integrations howerver are only as stable as the code which powers them, which is bundled into Home Assistant's open source repo. They're often hard to debug, a mixed bag of code quality, and tightly coupled to the core of HASS (meaning they need maintained). So problem number one: build a more stable integration for the core services I use.
+
+Problem number two came down to the fact that I have a Luxor system for exterior lighting. There's not currently a Home Assistant integration, but there _is_ a Homebridge one. Immediately I had to ask myself, why do we have to re-build third party integrations for every platform? I'd love to use the Homebridge integration (specifically the Luxor integration) as part of Home Assistant, but that requires me to wire up Homebridge - non-trivial as I already use a different Homekit integration - or to extract it and roll my own.
+
+So, Homeline was born. The goal is to support an abstraction on device integrations (via MQTT), meaning I can build my own Luxor and SimpliSafe integrations, but have them completely decoupled from e.g. Home Assistant's Python core, or Homebridge's JavaScript core. I can then choose to build a Home Assistant integration which ingests Homeline information, and maintains the ability to register those devices/entities, as well as update their state, and enable service calls. Ultimately, that means my system is as stable as the usptream provider (e.g. SimpliSafe), as the MQTT stream will be completely stable. I have to respond to changes in HA for my singular integration, and respond to changes in the upstream API provider, but I simply them to the same stable stream minimizing the maintenance and breakage.
+
 ## Integrations
 
 Integrations are written as simple classes that contain the ability to both publish and receive messages from an MQTT broker. In general, they are made up of two core patterns:
