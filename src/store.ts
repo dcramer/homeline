@@ -74,7 +74,7 @@ export class Store implements IStore {
   }
 
   private saveState() {
-    this.#logger.info(`Writing state to ${this.#filepath}`);
+    this.#logger.debug(`Writing state to ${this.#filepath}`);
     fs.writeFileSync(this.#filepath, JSON.stringify(this.#state));
   }
 
