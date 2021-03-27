@@ -25,6 +25,11 @@ export type MessageCallback = (
   message: string | Buffer
 ) => Promise<void>;
 
+export type CommandCallback = (
+  route: RouteInfo,
+  command: CommandPayload
+) => Promise<void>;
+
 type Route = {
   match: string;
   regex: RegExp;
@@ -179,6 +184,16 @@ export class Integration implements IIntegration {
 
     this.logger.debug(`subscribed to ${mqttTopic}`);
     await this.subscribe(mqttTopic);
+  }
+
+  async routeCommand(match: string, callback: CommandCallback) {
+    await this.route(
+      match,
+      async (routeInfo: RouteInfo, message: string | Buffer) => {
+        const payload = this.parseCommand(message);
+        await callback(routeInfo, payload);
+      }
+    );
   }
 
   /* tslint:disable-next-line */

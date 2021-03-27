@@ -1,7 +1,7 @@
-import { Integration, MessageCallback } from "../";
+import { CommandCallback, Integration } from "../";
 import { AGENT } from "../../version";
 
-import SimpliSafeApi from "./api";
+import SimpliSafeApi, { AlarmState } from "./api";
 import SimpliSafeStream from "./stream";
 import { SimpliSafeEvent, EventType } from "./event";
 
@@ -12,6 +12,8 @@ enum State {
   pending_mfa,
   ready,
 }
+
+class UnknownCommand extends Error {}
 
 // TODO(dcramer): this is the equiv of docs right now, but it'd be great to explain to the
 // system that we will use this type for the getState()/setState() abstractions.
@@ -58,7 +60,7 @@ export default class SimpliSafeIntegration extends Integration {
       await this.onReady();
     }
 
-    await this.route(
+    await this.routeCommand(
       `simplisafe/uid/<userId>/sid/<systemId>/cmd`,
       this.onSystemCommand
     );
@@ -68,8 +70,21 @@ export default class SimpliSafeIntegration extends Integration {
     // );
   }
 
-  onSystemCommand: MessageCallback = async ({ params }, message) => {
-    const payload = this.parseCommand(message);
+  onSystemCommand: CommandCallback = async ({ params }, payload) => {
+    const { accessToken } = await this.getState();
+    switch (payload.name) {
+      case "arm_home":
+        this.#api.setAlarmState(accessToken, params.systemId, AlarmState.home);
+        break;
+      case "arm_away":
+        this.#api.setAlarmState(accessToken, params.systemId, AlarmState.away);
+        break;
+      case "disarm":
+        this.#api.setAlarmState(accessToken, params.systemId, AlarmState.off);
+        break;
+      default:
+        throw new UnknownCommand(payload.name);
+    }
   };
 
   formatTopicName = (name: string) =>

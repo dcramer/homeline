@@ -50,11 +50,22 @@ type RouteMatch = {
 
 class MyIntegration extends Integration {
   init() {
-    this.route("simplisafe/#/sensor/{sensorId}/cmd", this.onSensorCommand);
+    this.routeCommand(
+      "simplisafe/#/sensor/{sensorId}/cmd",
+      this.onSensorCommand
+    );
   }
 
-  onSensorCommand = (route: RouteMatch, message: string | Buffer) => {
-    // ...
+  onSensorCommand: CommandCallback = (
+    route: RouteMatch,
+    payload: CommandPayload
+  ) => {
+    switch (payload.name) {
+      case "command_name":
+        const { sensorId } = route.params;
+        // do the thing
+        break;
+    }
   };
 }
 ```

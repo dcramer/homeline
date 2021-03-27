@@ -8,7 +8,7 @@ type AuthenticationResult = {
   refreshToken?: string;
 };
 
-enum AlarmState {
+export enum AlarmState {
   alarm,
   alarm_count,
   away,
