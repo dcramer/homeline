@@ -1,4 +1,6 @@
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosResponse, Method } from "axios";
+
+import { RethrownError } from "../../utils/errors";
 
 const API_URL_BASE = "https://api.simplisafe.com/v1";
 
@@ -9,18 +11,9 @@ type AuthenticationResult = {
 };
 
 export enum AlarmState {
-  alarm,
-  alarm_count,
   away,
-  away_count,
-  entry_delay,
-  error,
-  exit_delay,
   home,
-  home_count,
   off,
-  test,
-  unknown,
 }
 
 type SimpliSafeSystem = {
@@ -28,6 +21,8 @@ type SimpliSafeSystem = {
   sid: number;
   // many other attributes that dont seem to be relevant for typical usage
 };
+
+class SimpliSafeApiError extends RethrownError {}
 
 export default class SimpliSafeApi {
   #apiUrl: string = API_URL_BASE;
@@ -43,16 +38,10 @@ export default class SimpliSafeApi {
     systemId: string,
     state: AlarmState
   ) {
-    const response = await axios.post(
-      `${this.#apiUrl}/ss3/subscriptions/${systemId}/state/${AlarmState[
-        state
-      ].toString()}`,
-      undefined,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
+    await this.request(
+      "post",
+      `/ss3/subscriptions/${systemId}/state/${AlarmState[state].toString()}`,
+      accessToken
     );
   }
 
@@ -60,13 +49,12 @@ export default class SimpliSafeApi {
     accessToken: string,
     userId: string
   ): Promise<SimpliSafeSystem[]> {
-    const response = await axios.get(
-      `${this.#apiUrl}/users/${userId}/subscriptions`,
+    const response = await this.request(
+      "get",
+      `/users/${userId}/subscriptions`,
+      accessToken,
       {
         params: { activeOnly: "true" },
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
       }
     );
 
@@ -74,6 +62,32 @@ export default class SimpliSafeApi {
       sid: entry.sid,
       uid: entry.uid,
     }));
+  }
+
+  async request(
+    method: Method,
+    path: string,
+    accessToken: string,
+    ...args: any
+  ): Promise<any> {
+    try {
+      return await axios.request({
+        method,
+        url: `${this.#apiUrl}${path}`,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        ...args,
+      });
+    } catch (err) {
+      if (err.response && err.response.data) {
+        throw new SimpliSafeApiError(
+          `HTTP ${err.response.status}: ${err.response.data.message}`,
+          err
+        );
+      }
+      throw err;
+    }
   }
 
   async authenticate(payload = {}): Promise<AuthenticationResult> {

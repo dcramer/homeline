@@ -1,0 +1,191 @@
+{
+  "subscriptions": [
+    {
+      "uid": 54321,
+      "sid": 12345,
+      "sStatus": 20,
+      "activated": 1571529610,
+      "planSku": "SSEDSM2",
+      "planName": "Interactive Monitoring",
+      "price": 24.99,
+      "currency": "USD",
+      "country": "US",
+      "expires": 1619092810,
+      "canceled": 0,
+      "extraTime": 0,
+      "creditCard": {
+        "lastFour": "",
+        "type": "",
+        "ppid": "00000000",
+        "backupPpid": null,
+        "uid": 54321
+      },
+      "time": 2628000,
+      "paymentProfileId": "00000000",
+      "features": {
+        "monitoring": true,
+        "alerts": true,
+        "online": true,
+        "hazard": true,
+        "video": true,
+        "cameras": 10,
+        "dispatch": true,
+        "proInstall": false,
+        "discount": 0,
+        "vipCS": false,
+        "medical": true,
+        "careVisit": false,
+        "storageDays": 30
+      },
+      "status": {
+        "hasBaseStation": true,
+        "isActive": true,
+        "monitoring": "Active"
+      },
+      "subscriptionFeatures": {
+        "monitoredSensorsTypes": [
+          "Entry",
+          "Motion",
+          "GlassBreak",
+          "Smoke",
+          "CO",
+          "Freeze",
+          "Water"
+        ],
+        "monitoredPanicConditions": ["Fire", "Medical", "Duress"],
+        "dispatchTypes": ["Police", "Fire", "Medical", "Guard"],
+        "remoteControl": [
+          "ArmDisarm",
+          "LockUnlock",
+          "ViewSettings",
+          "ConfigureSettings"
+        ],
+        "cameraFeatures": {
+          "liveView": true,
+          "maxRecordingCameras": 10,
+          "recordingStorageDays": 30,
+          "videoVerification": true
+        },
+        "support": {
+          "level": "Basic",
+          "annualVisit": false,
+          "professionalInstall": false
+        },
+        "cellCommunicationBackup": true,
+        "alertChannels": ["Push", "SMS", "Email"],
+        "alertTypes": ["Alarm", "Error", "Activity", "Camera"],
+        "alarmModes": ["Alarm", "SecretAlert", "Disabled"],
+        "supportedIntegrations": [
+          "GoogleAssistant",
+          "AmazonAlexa",
+          "AugustLock"
+        ],
+        "timeline": {},
+        "isProfessionallyMonitored": true
+      },
+      "dispatcher": "cops",
+      "dcid": 7,
+      "activationCode": "ABCDEFGHI",
+      "systemVersion": 20,
+      "orderProductId": 11111111,
+      "location": {
+        "sid": 12345,
+        "uid": 54321,
+        "lStatus": 10,
+        "account": "00000000",
+        "street1": "12345 Maiden Ln",
+        "street2": "",
+        "locationName": "",
+        "city": "San Francisco",
+        "county": "SAN FRANCISCO",
+        "state": "CA",
+        "zip": "94107",
+        "country": "US",
+        "crossStreet": "",
+        "notes": "One cat, One dog",
+        "residenceType": 2,
+        "numAdults": 2,
+        "numChildren": 0,
+        "locationOffset": -420,
+        "safeWord": "LOL",
+        "signature": "David Cramer",
+        "timeZone": 3,
+        "primaryContacts": [
+          {
+            "name": "David Cramer",
+            "firstName": "David",
+            "lastName": "Cramer",
+            "phone": "55555555555"
+          }
+        ],
+        "secondaryContacts": [
+          {
+            "name": "",
+            "phone": ""
+          },
+          {
+            "name": "",
+            "phone": ""
+          },
+          {
+            "name": "",
+            "phone": ""
+          },
+          {
+            "name": "",
+            "phone": ""
+          },
+          {
+            "name": "",
+            "phone": ""
+          }
+        ],
+        "copsOptIn": false,
+        "certificateUri": "https://simplisafe.com/account2/12345/alarm-certificate/54321",
+        "nestStructureId": "",
+        "system": {
+          "serial": "00000000",
+          "alarmState": "OFF",
+          "alarmStateTimestamp": 0,
+          "isAlarming": false,
+          "version": 3,
+          "capabilities": {
+            "setWifiOverCell": true,
+            "setDoorbellChimeVolume": true,
+            "outdoorBattCamera": true
+          },
+          "temperature": null,
+          "exitDelayRemaining": 60,
+          "cameras": [],
+          "connType": "wifi",
+          "stateUpdated": 1617034331,
+          "messages": [
+            {
+              "_id": "605d46d1fce80616a9fb7764",
+              "id": "870c42ab-d6ee-42b3-93b1-ddb9ade700d2",
+              "textTemplate": "New software update available.  Please go to your Keypad for instructions.",
+              "text": "New software update available.  Please go to your Keypad for instructions.",
+              "code": "0001",
+              "filters": [],
+              "link": "",
+              "linkLabel": "",
+              "expiration": 0,
+              "category": "general",
+              "timestamp": 1616725713
+            }
+          ],
+          "powerOutage": false,
+          "lastPowerOutage": 1613175866,
+          "lastSuccessfulWifiSSID": "WiFi Network Name",
+          "lastSuccessfulWifiTS": 1617033712,
+          "isOffline": false
+        }
+      },
+      "pinUnlocked": true,
+      "billDate": 1619092810,
+      "billInterval": 2628000,
+      "pinUnlockedBy": "pin",
+      "autoActivation": null
+    }
+  ]
+}
