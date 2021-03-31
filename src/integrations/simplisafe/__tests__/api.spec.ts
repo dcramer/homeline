@@ -51,7 +51,7 @@ describe("SimpliSafeApi", () => {
           "status": "authenticated",
           "token": Object {
             "accessToken": "access-token",
-            "expiresAt": 1530082803600,
+            "expiresAt": 1586707203600,
             "refreshToken": "refresh-token",
           },
         }

@@ -66,7 +66,7 @@ describe("SimpliSafeIntegration", () => {
         Object {
           "token": Object {
             "accessToken": "access-token",
-            "expiresAt": 1530082803600,
+            "expiresAt": 1586707203600,
             "refreshToken": "refresh-token",
           },
           "userId": 12345,
@@ -151,7 +151,7 @@ describe("SimpliSafeIntegration", () => {
         Object {
           "token": Object {
             "accessToken": "access-token",
-            "expiresAt": 1530082803600,
+            "expiresAt": 1586707203600,
             "refreshToken": "refresh-token",
           },
           "userId": 12345,
@@ -203,7 +203,7 @@ describe("SimpliSafeIntegration", () => {
           "defaultSystemId": 54312,
           "token": Object {
             "accessToken": "access-token",
-            "expiresAt": 1530082803600,
+            "expiresAt": 1586707203600,
             "refreshToken": "refresh-token",
           },
           "userId": 12345,
