@@ -53,16 +53,22 @@ describe("SimpliSafeIntegration", () => {
       });
 
       integration.setState({
-        accessToken: "access-token",
-        refreshToken: "refresh-token",
+        token: {
+          accessToken: "access-token",
+          refreshToken: "refresh-token",
+          expiresAt: new Date().getTime() + 3600,
+        },
       });
 
       await integration.init();
 
       expect(await integration.getState()).toMatchInlineSnapshot(`
         Object {
-          "accessToken": "access-token",
-          "refreshToken": "refresh-token",
+          "token": Object {
+            "accessToken": "access-token",
+            "expiresAt": 1530082803600,
+            "refreshToken": "refresh-token",
+          },
           "userId": 12345,
         }
       `);
@@ -96,12 +102,22 @@ describe("SimpliSafeIntegration", () => {
           scope: "offline_access",
         })
         .reply(200, {
-          // ...
+          access_token: "access-token",
+          refresh_token: "refresh-token",
+          expires_in: 3600,
         });
 
       await integration.init();
 
-      expect(await integration.getState()).toMatchInlineSnapshot(`Object {}`);
+      expect(await integration.getState()).toMatchInlineSnapshot(`
+        Object {
+          "token": Object {
+            "accessToken": undefined,
+            "expiresAt": NaN,
+            "refreshToken": undefined,
+          },
+        }
+      `);
     });
 
     it("authenticates without mfa flow", async () => {
@@ -127,20 +143,23 @@ describe("SimpliSafeIntegration", () => {
         .reply(200, {
           access_token: "access-token",
           refresh_token: "refresh-token",
+          expires_in: 3600,
         });
 
       await integration.init();
 
       expect(await integration.getState()).toMatchInlineSnapshot(`
         Object {
-          "accessToken": "access-token",
-          "refreshToken": "refresh-token",
+          "token": Object {
+            "accessToken": "access-token",
+            "expiresAt": 1530082803600,
+            "refreshToken": "refresh-token",
+          },
           "userId": 12345,
         }
       `);
     });
-  });
-  describe("onReady", () => {
+
     it("sets a default system ID", async () => {
       const store = new MockStore();
       const integration = new SimpliSafeIntegration(
@@ -152,8 +171,11 @@ describe("SimpliSafeIntegration", () => {
       );
 
       integration.setState({
-        accessToken: "access-token",
-        refreshToken: "refresh-token",
+        token: {
+          accessToken: "access-token",
+          refreshToken: "refresh-token",
+          expiresAt: new Date().getTime() + 3600,
+        },
         userId: 12345,
       });
 
@@ -175,13 +197,16 @@ describe("SimpliSafeIntegration", () => {
           ],
         });
 
-      await integration.onReady();
+      await integration.init();
 
       expect(await integration.getState()).toMatchInlineSnapshot(`
         Object {
-          "accessToken": "access-token",
           "defaultSystemId": 54312,
-          "refreshToken": "refresh-token",
+          "token": Object {
+            "accessToken": "access-token",
+            "expiresAt": 1530082803600,
+            "refreshToken": "refresh-token",
+          },
           "userId": 12345,
         }
       `);

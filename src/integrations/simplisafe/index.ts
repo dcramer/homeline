@@ -1,7 +1,11 @@
 import { CommandCallback, Integration } from "../";
 import { AGENT } from "../../version";
 
-import SimpliSafeApi, { AlarmState } from "./api";
+import SimpliSafeApi, {
+  AlarmState,
+  SimpliSafeAuthError,
+  SimpliSafeToken,
+} from "./api";
 import SimpliSafeStream from "./stream";
 import { SimpliSafeEvent, EventType } from "./event";
 
@@ -18,8 +22,7 @@ class UnknownCommand extends Error {}
 // TODO(dcramer): this is the equiv of docs right now, but it'd be great to explain to the
 // system that we will use this type for the getState()/setState() abstractions.
 type SimpliSafeState = {
-  accessToken?: string;
-  refreshToken?: string;
+  token?: SimpliSafeToken;
   userId?: string;
   defaultSystemId?: string;
 };
@@ -42,22 +45,16 @@ export default class SimpliSafeIntegration extends Integration {
     this.#stream.on("event", this.onSimpliSafeEvent);
 
     this.#state = State.authenticating;
-    const { accessToken } = await this.getState();
-    if (accessToken) {
-      try {
-        const { userId } = await this.#api.verifyAuth(accessToken);
-        await this.setState({ userId });
-        this.#state = State.ready;
-        this.#stream.init(accessToken, userId, this.logger);
-      } catch (err) {
-        await this.authenticate();
-      }
+    const { token } = await this.getState();
+    this.#api.setAccessToken(token);
+    this.#api.on("token", async (token) => {
+      await this.setState({ token });
+      await this.onAccessToken();
+    });
+    if (token) {
+      await this.onAccessToken();
     } else {
       await this.authenticate();
-    }
-
-    if (this.#state === State.ready) {
-      await this.onReady();
     }
 
     await this.routeCommand(
@@ -71,16 +68,15 @@ export default class SimpliSafeIntegration extends Integration {
   }
 
   onSystemCommand: CommandCallback = async ({ params }, payload) => {
-    const { accessToken } = await this.getState();
     switch (payload.name) {
       case "arm_home":
-        this.#api.setAlarmState(accessToken, params.systemId, AlarmState.home);
+        this.#api.setAlarmState(params.systemId, AlarmState.home);
         break;
       case "arm_away":
-        this.#api.setAlarmState(accessToken, params.systemId, AlarmState.away);
+        this.#api.setAlarmState(params.systemId, AlarmState.away);
         break;
       case "disarm":
-        this.#api.setAlarmState(accessToken, params.systemId, AlarmState.off);
+        this.#api.setAlarmState(params.systemId, AlarmState.off);
         break;
       default:
         throw new UnknownCommand(payload.name);
@@ -90,10 +86,37 @@ export default class SimpliSafeIntegration extends Integration {
   formatTopicName = (name: string) =>
     name.toString().replace(/[_\s]/g, "-").toLowerCase();
 
+  onAccessToken = async () => {
+    let userId: string;
+
+    try {
+      userId = (await this.#api.verifyAuth()).userId;
+      await this.setState({
+        userId,
+      });
+      this.#state = State.ready;
+    } catch (err) {
+      if (err instanceof SimpliSafeAuthError) {
+        this.logger.info("Access token was invalid; Re-authenticating");
+        this.#state = State.authenticating;
+        this.#api.setAccessToken();
+        await this.authenticate();
+      } else {
+        this.logger.error(err);
+      }
+      return;
+    }
+
+    if (this.#state === State.ready) {
+      await this.onReady();
+    }
+  };
+
   onReady = async () => {
-    const { accessToken, userId } = await this.getState();
+    const { token, userId } = await this.getState();
     this.logger.info(`Authenticated as user ID: ${userId}`);
-    const systems = await this.#api.getSystems(accessToken, userId);
+    this.#stream.init(token.accessToken, userId, this.logger);
+    const systems = await this.#api.getSystems(userId);
     // TODO(dcramer): why can systems be undefined? is this a promise concept i dont grok?
     if (systems!.length > 0) {
       this.setState({ defaultSystemId: systems![0].sid });
@@ -126,21 +149,7 @@ export default class SimpliSafeIntegration extends Integration {
       });
 
       if (result.status === "authenticated") {
-        const { userId } = await this.#api.verifyAuth(
-          result.accessToken as string
-        );
-        await this.setState({
-          accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
-          userId,
-        });
-
-        this.#state = State.ready;
-        this.#stream.init(result.accessToken as string, userId, this.logger);
-
-        if (this.#state === State.ready) {
-          await this.onReady();
-        }
+        // this path is handled via the token callback
       } else if (result.status === "pending_mfa") {
         this.#state = State.pending_mfa;
 

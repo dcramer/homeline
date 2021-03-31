@@ -1,14 +1,9 @@
 import axios, { AxiosResponse, Method } from "axios";
+import EventEmitter from "events";
 
 import { RethrownError } from "../../utils/errors";
 
 const API_URL_BASE = "https://api.simplisafe.com/v1";
-
-type AuthenticationResult = {
-  status: string;
-  accessToken?: string;
-  refreshToken?: string;
-};
 
 export enum AlarmState {
   away,
@@ -16,43 +11,63 @@ export enum AlarmState {
   off,
 }
 
-type SimpliSafeSystem = {
+export type SimpliSafeSystem = {
   uid: number;
   sid: number;
   // many other attributes that dont seem to be relevant for typical usage
 };
 
-class SimpliSafeApiError extends RethrownError {}
+export class SimpliSafeApiError extends RethrownError {}
 
-export default class SimpliSafeApi {
+export class SimpliSafeAuthError extends SimpliSafeApiError {}
+
+export type SimpliSafeToken = {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+};
+
+type AuthenticationResult = {
+  status: string;
+  token?: SimpliSafeToken;
+};
+
+export default class SimpliSafeApi extends EventEmitter {
   #apiUrl: string = API_URL_BASE;
 
   #clientId: string;
+  #token?: SimpliSafeToken;
 
-  constructor({ clientId }: { clientId: string }) {
+  constructor({
+    clientId,
+    token,
+  }: {
+    clientId: string;
+    token?: SimpliSafeToken;
+  }) {
+    super();
+
     this.#clientId = clientId;
+    this.#token = token;
   }
 
-  async setAlarmState(
-    accessToken: string,
-    systemId: string,
-    state: AlarmState
-  ) {
+  setAccessToken(token?: SimpliSafeToken) {
+    this.#token = token;
+
+    this.emit("token", token);
+  }
+
+  async setAlarmState(systemId: string, state: AlarmState) {
     await this.request(
       "post",
-      `/ss3/subscriptions/${systemId}/state/${AlarmState[state].toString()}`,
-      accessToken
+      `/ss3/subscriptions/${systemId}/state/${AlarmState[state].toString()}`
     );
   }
 
-  async getSystems(
-    accessToken: string,
-    userId: string
-  ): Promise<SimpliSafeSystem[]> {
+  async getSystems(userId: string): Promise<SimpliSafeSystem[]> {
     const response = await this.request(
       "get",
       `/users/${userId}/subscriptions`,
-      accessToken,
       {
         params: { activeOnly: "true" },
       }
@@ -64,23 +79,27 @@ export default class SimpliSafeApi {
     }));
   }
 
-  async request(
-    method: Method,
-    path: string,
-    accessToken: string,
-    ...args: any
-  ): Promise<any> {
+  async request(method: Method, path: string, ...args: any): Promise<any> {
+    if (!this.#token) {
+      throw new Error("No access token set");
+    }
     try {
       return await axios.request({
         method,
         url: `${this.#apiUrl}${path}`,
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${this.#token.accessToken}`,
         },
         ...args,
       });
     } catch (err) {
       if (err.response && err.response.data) {
+        if (err.response.status === 401) {
+          throw new SimpliSafeAuthError(
+            `HTTP ${err.response.status}: ${err.response.data.message}`,
+            err
+          );
+        }
         throw new SimpliSafeApiError(
           `HTTP ${err.response.status}: ${err.response.data.message}`,
           err
@@ -110,20 +129,30 @@ export default class SimpliSafeApi {
       throw err;
     }
 
+    const accessToken = response!.data.access_token;
+    const refreshToken = response!.data.refresh_token;
+    const expiresAt = new Date().getTime() + response!.data.expires_in;
+
+    const token: SimpliSafeToken = { accessToken, refreshToken, expiresAt };
+
+    this.setAccessToken(token);
+
     return {
       status: "authenticated",
-      accessToken: response!.data.access_token,
-      refreshToken: response!.data.refresh_token,
+      token,
     };
   }
 
-  async verifyAuth(accessToken: string): Promise<{ userId: string }> {
-    const authResponse = await axios.get(`${this.#apiUrl}/api/authCheck`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
+  async verifyAuth(): Promise<{ userId: string }> {
+    let authResponse;
+    try {
+      authResponse = await this.request("get", `/api/authCheck`);
+    } catch (err) {
+      if (err.response?.status === 404) {
+        throw new SimpliSafeAuthError("404 while verifying auth", err);
+      }
+      throw err;
+    }
     const userId = authResponse!.data.userId;
 
     return {
