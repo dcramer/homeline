@@ -53,6 +53,16 @@ export type CommandPayload = {
   };
 };
 
+export type Entity = {
+  id: string;
+  name: string;
+  defaultState: string;
+  state: string;
+  attributes: {
+    [key: string]: any;
+  };
+};
+
 interface IIntegration {
   getCanonicalName(): string;
 
@@ -246,6 +256,10 @@ export class Integration implements IIntegration {
   async publish(topic: string, message: any, serialize = true) {
     this.logger.debug(`> ${topic}`);
     this.#mqtt.publish(topic, serialize ? JSON.stringify(message) : message);
+  }
+
+  async publishEntity(topicPrefix: string, entity: Entity) {
+    this.publish(`${topicPrefix}/entity/${entity.id}`, JSON.stringify(entity));
   }
 
   log(message: any): void {
