@@ -47,8 +47,8 @@ export default class SimpliSafeIntegration extends Integration {
     this.#state = State.authenticating;
     const { token } = await this.getState();
     this.#api.setAccessToken(token);
-    this.#api.on("token", async (token) => {
-      await this.setState({ token });
+    this.#api.on("token", async (value) => {
+      await this.setState({ token: value });
       await this.onAccessToken();
     });
     if (token) {

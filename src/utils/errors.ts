@@ -19,10 +19,10 @@ export class RethrownError extends ExtendedError {
     super(message);
     if (!error) throw new Error("RethrownError requires a message and error");
     this.original = error;
-    let message_lines = (this.message.match(/\n/g) || []).length + 1;
+    const messageLines = (this.message.match(/\n/g) || []).length + 1;
     this.stack =
       this.stack!.split("\n")
-        .slice(0, message_lines + 1)
+        .slice(0, messageLines + 1)
         .join("\n") +
       "\n" +
       error.stack;
