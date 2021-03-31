@@ -37,7 +37,7 @@ export class Store implements IStore {
   #debug: boolean;
 
   constructor(
-    filepath: string = "~/.cache/homeline.json",
+    filepath: string = "~/.cache/homeline/state.json",
     { debug = false }: StoreOptions = {}
   ) {
     this.#filepath = resolvePath(filepath);

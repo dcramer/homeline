@@ -114,7 +114,7 @@ const argv = yargs(process.argv).options({
   mqttHost: { type: "string", default: "localhost:1883" },
   debug: { type: "boolean", default: false },
   configPath: { type: "string", default: "./config.yml" },
-  cachePath: { type: "string", default: "~/.cache/homeline.json" },
+  cachePath: { type: "string", default: "~/.cache/homeline/state.json" },
 }).argv;
 
 main(argv);
