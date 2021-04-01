@@ -95,7 +95,7 @@ describe("SimpliSafeIntegration", () => {
         });
       mockAxios
         .onPost("https://api.simplisafe.com/v1/api/token", {
-          client_id: "homeline-0.1.0",
+          client_id: "homeline-0.1.0.WebApp.simplisafe.com",
           grant_type: "http://simplisafe.com/oauth/grant-type/mfa-oob",
           mfa_token: "mfa-token",
           oob_code: "oob-code",
@@ -131,13 +131,14 @@ describe("SimpliSafeIntegration", () => {
       );
       mockAxios
         .onPost("https://api.simplisafe.com/v1/api/token", {
-          client_id: "homeline-0.1.0",
+          client_id: "homeline-0.1.0.WebApp.simplisafe.com",
           app_version: "1.62.0",
           grant_type: "password",
           username: "my-username",
           password: "my-password",
           scope: "offline_access",
-          device_id: "homeline-0.1.0 (device-uuid)",
+          device_id:
+            'WebApp; useragent="Safari 13.1 (SS-ID: {0}) / macOS 10.15.6"; uuid="device-uuid"; id="homeline-0.1.0"',
         })
         .reply(200, {
           access_token: "access-token",

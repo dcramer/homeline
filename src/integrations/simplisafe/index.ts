@@ -28,17 +28,20 @@ type SimpliSafeState = {
 };
 
 export default class SimpliSafeIntegration extends Integration {
+  // public readonly config: SimpliSafeConfig = {};
+
   readonly #topicPrefix: string = "simplisafe";
-
   #state?: State;
-
   #api: SimpliSafeApi = new SimpliSafeApi({
-    clientId: AGENT,
+    clientId: `${AGENT}.WebApp.simplisafe.com`,
   });
-
   #stream: SimpliSafeStream = new SimpliSafeStream();
 
+  #ssDeviceId?: string;
+
   async init() {
+    this.#ssDeviceId = `WebApp; useragent="Safari 13.1 (SS-ID: {0}) / macOS 10.15.6"; uuid="${this.deviceUuid}"; id="${AGENT}"`;
+
     this.#stream.on("event", this.onSimpliSafeEvent);
 
     this.#state = State.authenticating;
@@ -142,7 +145,7 @@ export default class SimpliSafeIntegration extends Integration {
         username: this.config.username,
         password: this.config.password,
         app_version: APP_VERSION,
-        device_id: `${AGENT} (${this.deviceUuid})`,
+        device_id: this.#ssDeviceId,
       });
 
       if (result.status === "authenticated") {
