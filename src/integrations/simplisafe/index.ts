@@ -40,7 +40,7 @@ export default class SimpliSafeIntegration extends Integration {
   #ssDeviceId?: string;
 
   async init() {
-    this.#ssDeviceId = `WebApp; useragent="Safari 13.1 (SS-ID: {0}) / macOS 10.15.6"; uuid="${this.deviceUuid}"; id="${AGENT}"`;
+    this.#ssDeviceId = `WebApp; useragent="Safari 13.1 (SS-ID: ${AGENT}) / macOS 10.15.6"; uuid="${this.deviceId}"; id="${AGENT}"`;
 
     this.#stream.on("event", this.onSimpliSafeEvent);
 

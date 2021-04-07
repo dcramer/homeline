@@ -48,7 +48,8 @@ describe("SimpliSafeIntegration", () => {
     it("verifys auth with existing access token", async () => {
       const store = new MockStore();
       const integration = new SimpliSafeIntegration({
-        deviceUuid: "device-uuid",
+        id: "simplisafe",
+        deviceId: "device-uuid",
         store,
       });
 
@@ -77,7 +78,8 @@ describe("SimpliSafeIntegration", () => {
     it("handles mfa flow", async () => {
       const store = new MockStore();
       const integration = new SimpliSafeIntegration({
-        deviceUuid: "device-uuid",
+        id: "simplisafe",
+        deviceId: "device-uuid",
         store,
       });
 
@@ -124,7 +126,8 @@ describe("SimpliSafeIntegration", () => {
       const store = new MockStore();
       const integration = new SimpliSafeIntegration(
         {
-          deviceUuid: "device-uuid",
+          id: "simplisafe",
+          deviceId: "device-uuid",
           store,
         },
         { username: "my-username", password: "my-password" }
@@ -164,7 +167,8 @@ describe("SimpliSafeIntegration", () => {
       const store = new MockStore();
       const integration = new SimpliSafeIntegration(
         {
-          deviceUuid: "device-uuid",
+          id: "simplisafe",
+          deviceId: "device-uuid",
           store,
         },
         { username: "my-username", password: "my-password" }

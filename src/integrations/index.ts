@@ -4,14 +4,15 @@ import pino from "pino";
 import { State, IStore } from "../store";
 import { AGENT } from "../version";
 
-type IntegrationOptions = {
+export type IntegrationOptions = {
+  id: string;
   debug?: boolean;
   mqttHost?: string;
   store: IStore;
-  deviceUuid: string;
+  deviceId: string;
 };
 
-type IntegrationConfig = {
+export type IntegrationConfig = {
   [name: string]: any;
 };
 
@@ -64,6 +65,8 @@ export type Entity = {
 };
 
 interface IIntegration {
+  id: string;
+
   getCanonicalName(): string;
 
   getLastWill(): LastWill | null;
@@ -100,13 +103,15 @@ export class Integration implements IIntegration {
 
   private routes: Route[] = [];
 
+  public readonly id: string;
   public readonly logger: pino.Logger;
-  public readonly deviceUuid: string;
+  public readonly deviceId: string;
   public readonly config: IntegrationConfig = {};
 
   constructor(
     {
-      deviceUuid,
+      id,
+      deviceId,
       store,
       mqttHost = "localhost",
       debug = false,
@@ -116,8 +121,9 @@ export class Integration implements IIntegration {
     this.#store = store;
     this.#name = this.getCanonicalName();
 
+    this.id = id;
     this.config = config;
-    this.deviceUuid = deviceUuid;
+    this.deviceId = deviceId;
 
     this.logger = pino({
       name: this.#name,
