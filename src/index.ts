@@ -113,7 +113,7 @@ const main = async ({
   // out of band.
   span = transaction.startChild({
     op: "boot.init-broker",
-    description: "",
+    description: mqttHost,
   });
 
   const brokerOptions = { debug, deviceId };
