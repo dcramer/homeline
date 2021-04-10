@@ -70,11 +70,23 @@ const EVENT_MAPPING: {
   9703: EventType.lock_error,
 };
 
+export enum SensorType {
+  system,
+  lock,
+}
+
+const SENSOR_MAPPING: {
+  [sensorTypeId: number]: SensorType;
+} = {
+  0: SensorType.system,
+  16: SensorType.lock,
+};
+
 type RawEvent = {
   eventTimestamp: number;
   eventCid: number;
   zoneCid: string;
-  sensorType: number;
+  sensorTypeId: number;
   sensorSerial: string;
   account: string;
   userId: number;
@@ -94,6 +106,7 @@ type RawEvent = {
 
 export type SimpliSafeEvent = RawEvent & {
   type: EventType;
+  sensorType: SensorType | undefined;
 };
 
 export default (eventData: RawEvent): SimpliSafeEvent => {
@@ -105,5 +118,6 @@ export default (eventData: RawEvent): SimpliSafeEvent => {
   return {
     ...eventData,
     type,
+    sensorType: SENSOR_MAPPING[eventData.sensorTypeId],
   };
 };

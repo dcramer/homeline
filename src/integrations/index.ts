@@ -3,6 +3,7 @@ import pino from "pino";
 
 import * as Sentry from "@sentry/node";
 
+import { Entity } from "../types";
 import { State, IStore } from "../store";
 import { AGENT } from "../version";
 
@@ -52,16 +53,6 @@ export type CommandPayload = {
   id?: string;
   name: string;
   data?: {
-    [key: string]: any;
-  };
-};
-
-export type Entity = {
-  id: string;
-  name: string;
-  defaultState: string;
-  state: string;
-  attributes: {
     [key: string]: any;
   };
 };
