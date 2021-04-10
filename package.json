@@ -4,6 +4,8 @@
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
+    "@sentry/node": "^6.2.5",
+    "@sentry/tracing": "^6.2.5",
     "axios": "^0.21.1",
     "express": "^4.17.1",
     "express-pino-logger": "^6.0.0",

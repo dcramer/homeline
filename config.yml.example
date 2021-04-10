@@ -1,3 +1,7 @@
+sentry:
+  dsn: ""
+  tracesSampleRate: 1.0
+
 integrations:
   - id: echo
     module: homeline/integrations/echo

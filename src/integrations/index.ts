@@ -1,6 +1,8 @@
 import mqtt from "mqtt";
 import pino from "pino";
 
+import * as Sentry from "@sentry/node";
+
 import { State, IStore } from "../store";
 import { AGENT } from "../version";
 
@@ -217,7 +219,7 @@ export class Integration implements IIntegration {
     this.logger.error(
       `Error executing command '${payload?.name || ""}': ${err}`
     );
-    this.publish(
+    await this.publish(
       `${routeInfo.topic}/${payload?.id ? `cid/${payload.id}` : ""}/error`,
       payload
     );
@@ -225,28 +227,43 @@ export class Integration implements IIntegration {
 
   /* tslint:disable-next-line */
   async onMessage(topic: string, message: string | Buffer) {
-    for (let i = 0, route, match; i < this.routes.length; i++) {
-      route = this.routes[i];
-      match = topic.match(route.regex);
-      if (!match) {
-        continue;
+    const transaction = Sentry.startTransaction({
+      op: "integration.onMessage",
+      name: topic,
+    });
+
+    Sentry.withScope(async (scope) => {
+      scope.setSpan(transaction);
+      scope.setTag("integration.id", this.id);
+      scope.setTag("mqtt.topic", topic);
+
+      for (let i = 0, route, match; i < this.routes.length; i++) {
+        route = this.routes[i];
+        match = topic.match(route.regex);
+        if (!match) {
+          continue;
+        }
+
+        scope.setTag("integration.route", route.match);
+
+        try {
+          const routeInfo = {
+            route,
+            topic,
+            params: match.groups ?? {},
+          };
+          await route.callback(routeInfo, message);
+          transaction.finish();
+          return;
+        } catch (err) {
+          this.logger.error(`Error with route handler: ${err}`);
+        }
+        break;
       }
 
-      try {
-        const routeInfo = {
-          route,
-          topic,
-          params: match.groups ?? {},
-        };
-        await route.callback(routeInfo, message);
-        return;
-      } catch (err) {
-        this.logger.error(`Error with route handler: ${err}`);
-      }
-      break;
-    }
-
-    this.logger.warn(`No route for ${topic}`);
+      this.logger.warn(`No route for ${topic}`);
+    });
+    transaction.finish();
   }
 
   parseCommand(message: string | Buffer): CommandPayload {
@@ -265,7 +282,10 @@ export class Integration implements IIntegration {
   }
 
   async publishEntity(topicPrefix: string, entity: Entity) {
-    this.publish(`${topicPrefix}/entity/${entity.id}`, JSON.stringify(entity));
+    await this.publish(
+      `${topicPrefix}/entity/${entity.id}`,
+      JSON.stringify(entity)
+    );
   }
 
   log(message: any): void {
