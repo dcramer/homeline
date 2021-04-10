@@ -141,7 +141,7 @@ describe("SimpliSafeIntegration", () => {
           password: "my-password",
           scope: "offline_access",
           device_id:
-            'WebApp; useragent="Safari 13.1 (SS-ID: {0}) / macOS 10.15.6"; uuid="device-uuid"; id="homeline-0.1.0"',
+            'WebApp; useragent="Safari 13.1 (SS-ID: homeline-0.1.0) / macOS 10.15.6"; uuid="device-uuid"; id="homeline-0.1.0"',
         })
         .reply(200, {
           access_token: "access-token",
