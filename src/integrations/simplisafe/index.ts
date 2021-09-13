@@ -58,11 +58,11 @@ export default class SimpliSafeIntegration extends Integration {
     }
 
     await this.routeCommand(
-      `simplisafe/uid/<userId>/sid/<systemId>/cmd`,
+      `${this.#topicPrefix}/uid/<userId>/sid/<systemId>/cmd`,
       this.onSystemCommand
     );
     // this.route(
-    //   `simplisafe/uid/<userId>/sid/<systemId>/sensor/<sensorSerial>/+/cmd`,
+    //   `${this.#topicPrefix}/uid/<userId>/sid/<systemId>/sensor/<sensorSerial>/+/cmd`,
     //   this.onSensorCommand
     // );
   }
