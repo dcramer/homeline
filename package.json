@@ -10,7 +10,7 @@
     "express": "^4.17.1",
     "express-pino-logger": "^6.0.0",
     "machine-uuid": "^1.2.0",
-    "mqtt": "^4.1.0",
+    "mqtt": "^4.2.8",
     "pino": "^6.11.2",
     "socket.io-client": "^2",
     "yaml": "^1.10.2",
